@@ -57,7 +57,7 @@ The datasets record which page each session was on (`PageViewed`). It is temptin
 ## Interactive dashboard
 
 ```bash
-streamlit run app/streamlit_app.py
+python -m streamlit run app/streamlit_app.py
 ```
 
 Pick a scenario, or upload your own CSV with the same columns. The app shows the decision and caveats up top, then tabs for trust checks, results, segments, the uplift model and a test planner. The planner has a live sample-size calculator and a peeking simulator. Significance level, guardrail margin and traffic assumptions are adjustable in the sidebar.
@@ -71,8 +71,8 @@ python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\act
 pip install -r requirements.txt
 
 python scripts/run_analysis.py      # regenerates reports/ and figures
-pytest                              # 18 tests
-streamlit run app/streamlit_app.py  # dashboard
+python -m pytest                    # 18 tests
+python -m streamlit run app/streamlit_app.py  # dashboard
 ```
 
 Use it as a library:

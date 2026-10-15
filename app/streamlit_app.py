@@ -1,7 +1,7 @@
 """Interactive A/B test dashboard.
 
 Run from the repo root:
-    streamlit run app/streamlit_app.py
+    python -m streamlit run app/streamlit_app.py
 """
 
 from __future__ import annotations
