@@ -1,5 +1,7 @@
 # A/B Test Analyzer: four experiments, one trustworthy pipeline
 
+**Live demo:** [cyrus-ab-testing.streamlit.app](https://cyrus-ab-testing.streamlit.app/) (may take ~30 seconds to wake up)
+
 `abkit` is a Python toolkit that takes raw A/B test sessions and returns a decision you can defend: ship, hold, extend or reject. Before it reports an uplift, it checks whether the experiment itself can be trusted. Then it reads the result in both frequentist and Bayesian terms, tests guardrails, checks whether the test was big enough, corrects segment analysis for multiple testing, and fits an uplift model to see whether personalisation is worth it.
 
 I ran it on four website experiments (online education, travel booking, charity donations, SaaS free trial). Variation B "won" all four on the headline numbers. The pipeline recommends shipping three of them, holds the fourth because its traffic split is off, and flags caveats a dashboard would hide.
@@ -55,6 +57,8 @@ Full numbers for every scenario are in [`reports/summary.md`](reports/summary.md
 The datasets record which page each session was on (`PageViewed`). It is tempting to control for it or feed it to the uplift model, but the variation can change which page people reach. In the travel test, B has far fewer sessions recorded on the payment page (74 vs 120, p = 0.009). Adjusting for a variable the treatment affects biases the estimate, so `PageViewed` is used only for exploratory charts. Adjustment and uplift modelling use only attributes fixed before assignment (device and user type).
 
 ## Interactive dashboard
+
+Try it online at [cyrus-ab-testing.streamlit.app](https://cyrus-ab-testing.streamlit.app/), or run it locally:
 
 ```bash
 python -m streamlit run app/streamlit_app.py
