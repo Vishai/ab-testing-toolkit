@@ -1,139 +1,173 @@
-# A/B Test Analyzer: four experiments, one trustworthy pipeline
+# Bayesian Experimentation & Uplift Modeling Platform
 
-**Live demo:** [cyrus-ab-testing.streamlit.app](https://cyrus-ab-testing.streamlit.app/) (may take ~30 seconds to wake up)
+![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue)
+![PyMC](https://img.shields.io/badge/PyMC-6-1f6feb)
+![Airflow](https://img.shields.io/badge/Airflow-2.10-017cee)
+![Docker](https://img.shields.io/badge/Docker-ready-2496ed)
+![AWS](https://img.shields.io/badge/AWS-EC2%20%2B%20S3-ff9900)
+![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
-`abkit` is a Python toolkit that takes raw A/B test sessions and returns a decision you can defend: ship, hold, extend or reject. Before it reports an uplift, it checks whether the experiment itself can be trusted. Then it reads the result in both frequentist and Bayesian terms, tests guardrails, checks whether the test was big enough, corrects segment analysis for multiple testing, and fits an uplift model to see whether personalisation is worth it.
+Decides whether an experiment's lift was real, finds which users respond to which
+offer, and catches the ways an experiment quietly breaks before anyone reads the
+result.
 
-I ran it on four website experiments (online education, travel booking, charity donations, SaaS free trial). Variation B "won" all four on the headline numbers. The pipeline recommends shipping three of them, holds the fourth because its traffic split is off, and flags caveats a dashboard would hide.
+- **Hierarchical Bayesian treatment effects in PyMC.** Segment effects share
+  strength across low-volume markets, devices and customer types. Priors, prior
+  and posterior predictive checks, and credible intervals with a
+  region-of-practical-equivalence rule decide whether a lift was real.
+- **Uplift models for heterogeneous treatment effects.** These find which users
+  are most likely to respond to each offer. Automated checks cover sample ratio
+  mismatch, missing exposures, delayed conversions, leakage and contamination.
+- **Planned before launch, reproducible after.** Power analysis runs before any
+  data is read. Airflow pipelines run in Docker on AWS, and a dashboard of
+  posterior effects serves product and engineering. On the offer test below,
+  the platform surfaces incremental lift that aggregate A/B testing missed.
 
-![Uplift across all four tests](reports/figures/overview_uplift.png)
+> Built on [Cyrus Namjoo's A/B Test Analyzer](docs/original_ab_analyzer.md)
+> (MIT), whose session-level analysis of four website experiments is still here
+> and still runs. The platform work described below was added on top of it.
 
-## Results at a glance
+## What it found
 
-| Experiment | Control | Variation | Uplift (95% CI) | p | P(B>A) | Decision |
-|---|---|---|---|---|---|---|
-| Online education: course enrolment | 7.2% | 11.5% | +61% (+12% to +132%) | 0.009 | 99.6% | Ship, phased |
-| Travel booking: hotel reservations | 5.3% | 10.0% | +89% (+25% to +187%) | 0.002 | 99.9% | Ship, phased |
-| Charity: online donations | 4.4% | 8.4% | +91% (+21% to +201%) | 0.005 | 99.8% | Ship, but don't promise revenue |
-| SaaS: free-trial sign-up | 9.1% | 14.3% | +57% (+14% to +116%) | 0.005 | 99.7% | **Hold: traffic split is off** |
+A four-arm offer test (control, 10% discount, free shipping, bundle) across 12
+markets, 3 devices and new vs returning customers. It ran with 117,000 users,
+which is the size the pre-launch power analysis asked for. The logs are
+simulated with known true effects, so every estimate below can be checked
+against the truth ([full readout](reports/platform/report.md)).
 
-Full numbers for every scenario are in [`reports/summary.md`](reports/summary.md) and [`reports/results.json`](reports/results.json).
+| Question | Aggregate A/B test | This platform |
+| --- | --- | --- |
+| Does any offer win? | No. Best is free shipping at +5.8%, Dunnett-adjusted p = 0.15 | Same overall: every offer's 95% interval includes zero |
+| Who does the discount work for? | Not answerable | **+29%** for new customers (+17% to +42%), **-13%** for returning (-19% to -7%) |
+| Does free shipping work anywhere? | Not answerable | **+32% to +42%** on mobile in AU, NZ, IE and CA, the far-shipping markets, two of them too small to test alone |
+| What is targeting worth? | Not answerable | **+16.8% conversion** (+10.6% to +23.9%) on users the models never trained on, 81% of the oracle gain |
 
-## What the pipeline caught
+![Free shipping on mobile, by market](reports/platform/figures/free_shipping_by_market.png)
 
-**1. A broken traffic split behind a "winning" test (free trial).** The test was meant to split visitors 50/50, but control got 639 sessions and the variation got 561. A sample ratio mismatch test puts the odds of that happening by chance at about 2.4%. SRM usually means something in the pipeline is dropping users from one arm (a redirect that fails on some browsers, bot filtering that treats the arms differently, an assignment bug). Those losses are rarely random, so the +57% can't be trusted until the cause is found. The pipeline holds the rollout even though p = 0.005.
+NZ and IE have about 330 users per arm in this view. Their raw lifts (+93%) are
+mostly noise. Alone, the launch plan says a market that size could only detect a
++68% lift. The hierarchical model pulls those estimates toward what the related
+segments support, and still finds them credibly positive. Against the true
+effects, pooling cuts per-segment error from about 0.4 to 0.5 down to 0.05 to
+0.11.
 
-**2. The tests were too small to measure the effect precisely.** About 600 sessions per arm could only reliably detect lifts of +59% to +90% at 80% power. A realistic UI change lifts conversion by 5–20%, and detecting a 20% lift would need 4,300–9,300 sessions per arm. When an underpowered test does come out significant, it overstates the effect: a simulation shows that if the true lift were 20%, the significant results these tests produce would overshoot it 2.9–4.8x on average (the "winner's curse", Gelman & Carlin, 2014). The +89% for travel booking is real evidence that B is better, but a business case should be built on the lower end of the interval.
+![Policy lift on held-out users](reports/platform/figures/policy_lift.png)
 
-![Sample size vs detectable lift](reports/figures/power_curves.png)
+### On the four real A/B datasets
 
-**3. More conversions isn't always more money.** In the charity test, donations rose 91%, but the average gift fell from $97 to $87, and the bootstrap interval for revenue per visitor crosses zero. Travel shows the same pattern: B gets more bookings, but the average booking value dipped 11% (not significant). Revenue still rose 69% there because the conversion gain was big enough.
+The bundled website tests all showed headline lifts of +57% to +91% from about
+600 sessions per arm. The original analysis already warned these were inflated
+(the winner's curse). Read hierarchically across device and user type, every
+lift is still credibly positive, but smaller: +45% to +64%.
 
-**4. Segment "findings" mostly disappear after correction.** Each test was sliced 9 ways (device, user type, page). With that many cuts, chance alone will produce a "significant" segment fairly often. After Holm correction only two segments survive across all four tests. The one worth following up: in online education, B worked on mobile (+8.1 pp, Holm p = 0.015) and did nothing on desktop (−0.6 pp), with a device × treatment interaction of p = 0.044. That is a hypothesis for the next test, not grounds to personalise yet.
+![Headline vs hierarchical lift](reports/platform/figures/bundled_shrinkage.png)
 
-**5. The uplift model found nothing to target, and that's useful.** A cross-fitted T-learner ranked visitors by predicted benefit from B. In all four tests its Qini curve did no better than random ordering (permutation p = 0.21–0.55). So the evidence supports rolling B out to everyone rather than building personalisation.
+## How it works
 
-**6. Peeking would have inflated false positives to about 19%.** A simulation of 20,000 A/A tests shows that checking results 10 times and stopping at the first p < 0.05 produces a false positive 19% of the time instead of 5%. The pipeline reports the stricter per-look threshold (p < 0.011) that keeps the overall rate at 5%.
-
-![Peeking simulation](reports/figures/peeking_simulation.png)
-
-## What's inside
-
-| Stage | Method | Module |
-|---|---|---|
-| Trust checks | SRM chi-square (warn p < 0.05, fail p < 0.001), duplicates, nulls, revenue/conversion and bounce/conversion consistency, bot-like timings, covariate balance (SMD) | `quality.py` |
-| Primary KPI | Pooled two-proportion z-test, Wald CI for the difference, delta-method CI for relative uplift, Fisher exact test, Cohen's h | `stats.py` |
-| Secondary KPIs | Welch t-test (time on page, order value), percentile bootstrap for revenue per visitor | `stats.py` |
-| Guardrail | One-sided non-inferiority test on bounce rate (margin +2 pp) | `stats.py` |
-| Robustness | Logistic regression adjusted for device and user type | `stats.py` |
-| Bayesian view | Beta-Binomial posteriors, P(B > A), expected loss | `bayes.py` |
-| Planning | Sample size, MDE, runtime, winner's-curse simulation, peeking simulation with calibrated boundary | `power.py` |
-| Segments | Per-segment Fisher tests with Holm and Benjamini–Hochberg correction, likelihood-ratio interaction tests | `segments.py` |
-| Uplift model | T-learner (L2 logistic regression), 5-fold cross-fitting, Qini curve with permutation baseline | `uplift.py` |
-| Decision | Ordered rules: trust → guardrails → primary KPI, plus automatic caveats | `decision.py` |
-
-### A design choice worth explaining
-
-The datasets record which page each session was on (`PageViewed`). It is tempting to control for it or feed it to the uplift model, but the variation can change which page people reach. In the travel test, B has far fewer sessions recorded on the payment page (74 vs 120, p = 0.009). Adjusting for a variable the treatment affects biases the estimate, so `PageViewed` is used only for exploratory charts. Adjustment and uplift modelling use only attributes fixed before assignment (device and user type).
-
-## Interactive dashboard
-
-Try it online at [cyrus-ab-testing.streamlit.app](https://cyrus-ab-testing.streamlit.app/), or run it locally:
-
-```bash
-python -m streamlit run app/streamlit_app.py
+```mermaid
+flowchart LR
+    P[plan: power analysis] --> E[extract logs]
+    E --> V{validate: trust checks}
+    V -->|fail| H[halt the run]
+    V --> A[aggregate read-out]
+    V --> B[hierarchical Bayes]
+    V --> U[uplift models]
+    A & B & U --> R[report + dashboard bundle]
+    S[four bundled A/B tests] --> R
+    R --> D[posterior dashboard]
+    R --> S3[(S3)]
 ```
 
-Pick a scenario, or upload your own CSV with the same columns. The app shows the decision and caveats up top, then tabs for trust checks, results, segments, the uplift model and a test planner. The planner has a live sample-size calculator and a peeking simulator. Significance level, guardrail margin and traffic assumptions are adjustable in the sidebar.
+| Stage | What it does | Module |
+| --- | --- | --- |
+| Launch plan | Users per arm for a 10% lift at 80% power across 3 offers with Dunnett's correction, runtime, per-segment detectable lift, Bayesian assurance, simulated power and family-wise error | `launch_plan.py` |
+| Trust checks | SRM at assignment and exposure, assignment conflicts, missing exposures (and whether they differ by arm), contamination, conversion lag vs window and immature users, covariate balance, feature leakage | `integrity.py` |
+| Aggregate read-out | Each offer vs control, Dunnett-adjusted, as the plan specified | `launch_plan.py` |
+| Hierarchical model | Partially pooled market, device, tenure and pairwise interaction effects per offer, with non-centred PyMC model, prior and posterior predictive checks, R-hat, ESS, divergences, ROPE verdicts and prior sensitivity | `hierarchical.py` |
+| Uplift | Cross-fitted gradient-boosted outcome model per arm, best-offer policy, inverse-propensity policy value with bootstrap intervals, Qini per offer | `offer_uplift.py` |
+| Pipeline | Task graph with run manifests (config fingerprint, input hashes, versions, git commit, timings). Same config and seed give byte-identical outputs | `workflow.py` |
+| Orchestration | Airflow DAG generated from the same task list, with each task in its own virtualenv | `airflow/dags/` |
+| Dashboard | Posterior distributions, segment forest plots (raw vs pooled), targeting, diagnostics, run manifest | `app/posterior_dashboard.py` |
+| Simulator | Event-level logs with known true effects and switchable defects | `simulate.py` |
 
-## Quick start
+The model, priors and checks are explained in the docstrings of `hierarchical.py`;
+each design decision is in the commit history.
+
+## Run it
 
 ```bash
-git clone https://github.com/CyrusNamjoo/ab-testing-toolkit.git
-cd ab-testing-toolkit
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+pip install -e ".[app,fast,dev]"
 
-python scripts/run_analysis.py      # regenerates reports/ and figures
-python -m pytest                    # 18 tests
-python -m streamlit run app/streamlit_app.py  # dashboard
+python -m pytest                                     # 80 tests
+python -m abkit.workflow run --run-id demo --quick   # whole pipeline in about 2 minutes
+python -m abkit.workflow run --run-id full           # 4 chains x 1,000 draws, about 7 minutes
+python -m streamlit run app/posterior_dashboard.py   # dashboard for finished runs
 ```
 
-Use it as a library:
+Point it at real logs with `--source path/to/folder`, where the folder holds
+`experiment.json`, `users.csv`, `assignments.csv`, `exposures.csv` and
+`conversions.csv` (see `experiment_io.py`). If a trust check fails, the run stops
+before anything is estimated.
 
-```python
-from abkit import analyze
+### Airflow in Docker
 
-res = analyze("travel_booking")
-print(res["decision"]["label"])        # Ship B - phased rollout
-print(res["primary"]["uplift_ci"])     # ~(0.25, 1.87)
-print(res["bayes"]["prob_b_better"])   # ~0.999
+```bash
+mkdir -p artifacts && echo "AIRFLOW_UID=$(id -u)" > .env
+docker compose up -d --build
+# Airflow: http://localhost:8080 (admin / admin), dashboard: http://localhost:8501
 ```
 
-To add a new experiment, add one entry to `src/abkit/scenarios.py` and drop the file in `data/raw/`.
+The `abkit_experiment_readout` DAG runs daily. Trigger it with `{"quick": true}`
+for a fast run. Set `ABKIT_S3_URI` in `.env` to publish each finished run to S3.
 
-## Repository layout
+### AWS
 
-```
-├── app/streamlit_app.py          interactive dashboard
-├── data/raw/                     four A/B datasets (1,200 sessions each)
-├── notebooks/
-│   └── 01_travel_booking_case_study.ipynb   end-to-end walkthrough
-├── reports/
-│   ├── figures/                  all charts (regenerated by the script)
-│   ├── results.json              every number, machine-readable
-│   └── summary.md                per-scenario write-up
-├── scripts/run_analysis.py       CLI: runs everything
-├── src/abkit/                    the toolkit
-└── tests/                        unit tests checked against statsmodels/scipy
-```
+`infra/aws/` has Terraform for one EC2 instance running the same compose stack,
+plus:
 
-## Recommendations (travel booking)
+- a versioned, encrypted S3 bucket for readouts
+- the Airflow password in SSM Parameter Store
+- Session Manager access instead of SSH
+- ports open only to the CIDRs you list
 
-1. Roll out in phases (25% → 50% → 100% over three weeks), with automatic rollback if bounce rate rises more than 2 pp or checkout errors increase.
-2. Size the business case on the lower confidence bound (+25%), not the +89% headline.
-3. Track revenue per visitor and booking value mix, not just conversion count.
-4. Keep a 5% holdout and check at 4–6 weeks that conversion is still at least 1 pp above baseline with no guardrail degradation.
-5. Next test: split the two changes (transparent pricing vs one-page checkout) to learn which one drives the lift.
+See [infra/aws/README.md](infra/aws/README.md).
 
-## Ethics and privacy
+## Limits
 
-The analysis works on session-level data with no personal identifiers. Running similar tests in production would need disclosure of experimentation in the privacy policy (Australian Privacy Principles 1 and 5), consent-gated analytics cookies, and no dark patterns in variations (hidden fees, pre-ticked boxes, false urgency). Price-display tests in particular need to comply with the Australian Consumer Law on drip pricing. Segment-level personalisation should not use protected attributes or proxies for them.
+- The offer test is simulated, so its effects were designed. That's what makes
+  the estimates checkable, but it isn't evidence about a real business. The four
+  bundled datasets are coursework data (see the [original README](docs/original_ab_analyzer.md)).
+- Docker and AWS files are checked statically (compose structure, Dockerfile
+  sources, `terraform validate`, a rendered and syntax-checked boot script) and
+  the pipeline was run from a clean install the way the containers run it. They
+  have not been run on Docker or AWS from this repository.
+- Airflow can't run on Windows, so the DAG is tested against a stand-in Airflow
+  module, and its command template was rendered with Jinja and run through the
+  real CLI.
+- Users are randomised once. Repeat exposure, interference between users and
+  sequential monitoring of the Bayesian model are not modelled.
 
-## Limitations
+## Original toolkit
 
-- The data is simulated coursework data (MIS5308 Social and Web Analytics, Apex Higher Education). The datasets record which arm each session saw, not what B actually changed, so the variations described in `scenarios.py` are hypothesised.
-- Sessions are treated as independent. Real traffic has repeat visitors, so a production version should randomise and analyse at the user level.
-- There is no timestamp, so novelty effects, day-of-week patterns and sequential monitoring can't be checked on the real data. Peeking is shown by simulation instead.
-- Business impact figures use an assumed 30,000 sessions per month for illustration.
+`python scripts/run_analysis.py` still runs Cyrus Namjoo's session-level
+analysis of the four website tests. It covers trust checks, frequentist and
+Beta-Binomial read-outs, guardrails, power and peeking simulations,
+Holm-corrected segments and a T-learner, and writes `reports/summary.md`. His
+Streamlit app is at `app/streamlit_app.py`, and his write-up is in
+[docs/original_ab_analyzer.md](docs/original_ab_analyzer.md).
 
 ## References
 
-- Gelman, A., & Carlin, J. (2014). Beyond power calculations: Assessing Type S (sign) and Type M (magnitude) errors. *Perspectives on Psychological Science, 9*(6), 641–651.
-- Kohavi, R., Tang, D., & Xu, Y. (2020). *Trustworthy online controlled experiments: A practical guide to A/B testing*. Cambridge University Press.
-- Künzel, S. R., Sekhon, J. S., Bickel, P. J., & Yu, B. (2019). Metalearners for estimating heterogeneous treatment effects using machine learning. *PNAS, 116*(10), 4156–4165.
-- Radcliffe, N. J. (2007). Using control groups to target on predicted lift: Building and assessing uplift models. *Direct Marketing Analytics Journal, 1*, 14–21.
+- Gelman, A., & Hill, J. (2007). *Data Analysis Using Regression and Multilevel/Hierarchical Models*. Cambridge University Press.
+- Gelman, A., & Carlin, J. (2014). Beyond power calculations: Type S and Type M errors. *Perspectives on Psychological Science, 9*(6), 641-651.
+- Kruschke, J. K. (2018). Rejecting or accepting parameter values in Bayesian estimation. *Advances in Methods and Practices in Psychological Science, 1*(2), 270-280.
+- Dunnett, C. W. (1955). A multiple comparison procedure for comparing several treatments with a control. *JASA, 50*(272), 1096-1121.
+- Kohavi, R., Tang, D., & Xu, Y. (2020). *Trustworthy Online Controlled Experiments*. Cambridge University Press.
+- Kunzel, S. R., Sekhon, J. S., Bickel, P. J., & Yu, B. (2019). Metalearners for estimating heterogeneous treatment effects using machine learning. *PNAS, 116*(10), 4156-4165.
+- Radcliffe, N. J. (2007). Using control groups to target on predicted lift. *Direct Marketing Analytics Journal, 1*, 14-21.
 
 ## License
 
-MIT. Built by Cyrus (Sirous) Namjoo, Master of Information Systems (Data Analytics), Apex Higher Education.
+MIT. Original toolkit copyright Cyrus (Sirous) Namjoo; platform extensions
+copyright Brandon Armstrong. See [LICENSE](LICENSE).
