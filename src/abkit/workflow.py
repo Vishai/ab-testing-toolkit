@@ -133,6 +133,11 @@ def _write(path: Path, payload) -> None:
 
 
 def _read(path: Path):
+    for attempt in range(20):
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except PermissionError:  # Windows: another task is swapping this file in right now
+            time.sleep(0.05 * (attempt + 1))
     return json.loads(path.read_text(encoding="utf-8"))
 
 
