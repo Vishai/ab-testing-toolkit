@@ -40,7 +40,7 @@ against the truth ([full readout](reports/platform/report.md)).
 | Does any offer win? | No. Best is free shipping at +5.8%, Dunnett-adjusted p = 0.15 | Same overall: every offer's 95% interval includes zero |
 | Who does the discount work for? | Not answerable | **+29%** for new customers (+17% to +42%), **-13%** for returning (-19% to -7%) |
 | Does free shipping work anywhere? | Not answerable | **+32% to +42%** on mobile in AU, NZ, IE and CA, the far-shipping markets, two of them too small to test alone |
-| What is targeting worth? | Not answerable | **+16.8% conversion** (+10.6% to +23.9%) on users the models never trained on, 81% of the oracle gain |
+| What is targeting worth? | Not answerable | **+16.2% conversion** (+9.9% to +22.7%) on users the models never trained on, 81% of the oracle gain |
 
 ![Free shipping on mobile, by market](reports/platform/figures/free_shipping_by_market.png)
 
@@ -99,7 +99,7 @@ each design decision is in the commit history.
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -e ".[app,fast,dev]"
 
-python -m pytest                                     # 80 tests
+python -m pytest                                     # 91 tests
 python -m abkit.workflow run --run-id demo --quick   # whole pipeline in about 2 minutes
 python -m abkit.workflow run --run-id full           # 4 chains x 1,000 draws, about 7 minutes
 python -m streamlit run app/posterior_dashboard.py   # dashboard for finished runs

@@ -1,4 +1,4 @@
-# Experiment readout: `release`
+# Experiment readout: `release-2`
 
 ## Summary
 
@@ -11,13 +11,13 @@
 - Hierarchical model: free_shipping for NZ mobile users is a real lift (+42%, 95% interval +10% to +88%).
 - Hierarchical model: free_shipping for AU mobile users is a real lift (+42%, 95% interval +17% to +72%).
 - Hierarchical model: free_shipping for IE mobile users is a real lift (+38%, 95% interval +7% to +80%).
-- Sending each user their best predicted offer lifts conversion +16.8% over control (95% interval +10.6% to +23.9%), measured on users the models never trained on.
+- Sending each user their best predicted offer lifts conversion +16.2% over control (95% interval +9.9% to +22.7%), measured on users the models never trained on.
 
 ## 1. Launch plan (before any data)
 
 - Baseline 6.9%, smallest lift worth detecting 10%, power 80%, alpha 0.05 across 3 offers (Dunnett (many offers vs one control), critical z 2.349 vs Bonferroni 2.394).
 - 28,723 users per arm, 117,000 planned with a 1% buffer, about 22 days.
-- Simulated power at the target lift: bundle 79.7%, free_shipping 79.5%, pct10_discount 79.8%; family-wise false positives 5.1%; Bayesian assurance 80%.
+- Simulated power at the target lift: bundle 79.7%, free_shipping 79.5%, pct10_discount 79.8%; family-wise false positives 5.1%; Bayesian assurance 69% (chance the read-out calls an offer at the target lift a real lift, beating +2%).
 
 | Segment | Share | Users per arm | Smallest detectable lift alone |
 |---|---:|---:|---:|
@@ -51,7 +51,7 @@
 
 ## 4. Hierarchical Bayesian model
 
-Segments: market x device x tenure, partially pooled. Sampler: R-hat max 1.005, ESS min 997, 0 divergences (converged).
+Segments: market x device x tenure, partially pooled. Sampler: R-hat max 1.007, ESS min 997, 0 divergences (converged).
 Prior predictive: 90% of prior control rates in 1.2% to 30.9%. Posterior predictive: 99% of cells inside the 90% interval, chi-square Bayesian p 0.88 (passed).
 
 ### Overall
@@ -98,13 +98,15 @@ Prior predictive: 90% of prior control rates in 1.2% to 30.9%. Posterior predict
 
 ## 5. Uplift modelling: who responds to which offer
 
+Policy values are self-normalised inverse propensity estimates on users the models never trained on. The intervals are paired bootstrap intervals for each policy on its own; they are not adjusted for comparing several fixed offers, which is what the Dunnett-adjusted test in section 3 is for.
+
 | Policy | Conversion | Lift vs control | 95% interval |
 |---|---:|---:|---|
-| all_control | 6.81% | +0.0% | +0.0% to +0.0% |
-| all_pct10_discount | 6.91% | +1.6% | -5.3% to +7.8% |
-| all_free_shipping | 7.26% | +6.7% | +0.5% to +13.8% |
-| all_bundle | 6.80% | -0.1% | -6.2% to +6.5% |
-| targeted | 7.95% | +16.8% | +10.6% to +23.9% |
+| all_control | 6.82% | +0.0% | +0.0% to +0.0% |
+| all_pct10_discount | 6.90% | +1.3% | -5.3% to +7.9% |
+| all_free_shipping | 7.22% | +5.8% | -0.1% to +12.5% |
+| all_bundle | 6.84% | +0.4% | -5.5% to +6.8% |
+| targeted | 7.92% | +16.2% | +9.9% to +22.7% |
 
 Targeted allocation: pct10_discount 33%, free_shipping 32%, bundle 24%, control 11%
 
@@ -127,15 +129,15 @@ Against the truth the targeted policy captures 81% of what a perfect oracle woul
 
 ## 7. Reproducibility
 
-- Config fingerprint `5aaec13f585491ff`, git commit `32ed54b4c5`, Python 3.12.10.
+- Config fingerprint `5aaec13f585491ff`, git commit `017fd20f20`, Python 3.12.10.
 - Packages: abkit 0.2.0, arviz 1.3.0, numpy 2.5.4, numpyro 0.22.0, pandas 3.0.6, pymc 6.3.2, scikit-learn 1.9.1, scipy 1.18.1
 
 | Task | Status | Seconds |
 |---|---|---:|
 | aggregate | success | 0.9 |
-| bundled | success | 43.5 |
-| extract | success | 1.9 |
-| hierarchical | success | 360.1 |
-| plan | success | 1.2 |
-| uplift | success | 9.1 |
-| validate | success | 3.6 |
+| bundled | success | 46.2 |
+| extract | success | 3.0 |
+| hierarchical | success | 414.9 |
+| plan | success | 1.3 |
+| uplift | success | 16.0 |
+| validate | success | 3.7 |

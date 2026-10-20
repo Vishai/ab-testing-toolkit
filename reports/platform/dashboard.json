@@ -78,8 +78,26 @@
         "converged": true,
         "divergences": 0,
         "draws": 4000,
-        "max_rhat": 1.002501020141034,
-        "min_ess_bulk": 2268.1675764654037
+        "max_rhat": 1.0032030757192634,
+        "min_ess_bulk": 2268.1675764654037,
+        "parameters_checked": [
+          "a0",
+          "z_base_Device",
+          "z_base_UserType",
+          "z_base_cell",
+          "effect_mean",
+          "z_effect_Device",
+          "z_effect_UserType",
+          "z_effect_Device_x_UserType",
+          "z_effect_cell",
+          "sd_base_Device",
+          "sd_base_UserType",
+          "sd_base_cell",
+          "sd_effect_Device",
+          "sd_effect_UserType",
+          "sd_effect_Device_x_UserType",
+          "sd_effect_cell"
+        ]
       },
       "overall": {
         "abs_lift_ci": [
@@ -158,8 +176,26 @@
         "converged": true,
         "divergences": 0,
         "draws": 4000,
-        "max_rhat": 1.0028857230674006,
-        "min_ess_bulk": 1898.4714744774174
+        "max_rhat": 1.004170140576194,
+        "min_ess_bulk": 1898.4714744774174,
+        "parameters_checked": [
+          "a0",
+          "z_base_Device",
+          "z_base_UserType",
+          "z_base_cell",
+          "effect_mean",
+          "z_effect_Device",
+          "z_effect_UserType",
+          "z_effect_Device_x_UserType",
+          "z_effect_cell",
+          "sd_base_Device",
+          "sd_base_UserType",
+          "sd_base_cell",
+          "sd_effect_Device",
+          "sd_effect_UserType",
+          "sd_effect_Device_x_UserType",
+          "sd_effect_cell"
+        ]
       },
       "overall": {
         "abs_lift_ci": [
@@ -238,8 +274,26 @@
         "converged": true,
         "divergences": 0,
         "draws": 4000,
-        "max_rhat": 1.0021581917287243,
-        "min_ess_bulk": 1924.282982895529
+        "max_rhat": 1.0034953572946164,
+        "min_ess_bulk": 1924.282982895529,
+        "parameters_checked": [
+          "a0",
+          "z_base_Device",
+          "z_base_UserType",
+          "z_base_cell",
+          "effect_mean",
+          "z_effect_Device",
+          "z_effect_UserType",
+          "z_effect_Device_x_UserType",
+          "z_effect_cell",
+          "sd_base_Device",
+          "sd_base_UserType",
+          "sd_base_cell",
+          "sd_effect_Device",
+          "sd_effect_UserType",
+          "sd_effect_Device_x_UserType",
+          "sd_effect_cell"
+        ]
       },
       "overall": {
         "abs_lift_ci": [
@@ -318,8 +372,26 @@
         "converged": true,
         "divergences": 0,
         "draws": 4000,
-        "max_rhat": 1.0020077384946182,
-        "min_ess_bulk": 1849.0653785735915
+        "max_rhat": 1.0030912786117214,
+        "min_ess_bulk": 1849.0653785735915,
+        "parameters_checked": [
+          "a0",
+          "z_base_Device",
+          "z_base_UserType",
+          "z_base_cell",
+          "effect_mean",
+          "z_effect_Device",
+          "z_effect_UserType",
+          "z_effect_Device_x_UserType",
+          "z_effect_cell",
+          "sd_base_Device",
+          "sd_base_UserType",
+          "sd_base_cell",
+          "sd_effect_Device",
+          "sd_effect_UserType",
+          "sd_effect_Device_x_UserType",
+          "sd_effect_cell"
+        ]
       },
       "overall": {
         "abs_lift_ci": [
@@ -378,7 +450,7 @@
     "Hierarchical model: free_shipping for NZ mobile users is a real lift (+42%, 95% interval +10% to +88%).",
     "Hierarchical model: free_shipping for AU mobile users is a real lift (+42%, 95% interval +17% to +72%).",
     "Hierarchical model: free_shipping for IE mobile users is a real lift (+38%, 95% interval +7% to +80%).",
-    "Sending each user their best predicted offer lifts conversion +16.8% over control (95% interval +10.6% to +23.9%), measured on users the models never trained on."
+    "Sending each user their best predicted offer lifts conversion +16.2% over control (95% interval +9.9% to +22.7%), measured on users the models never trained on."
   ],
   "hierarchical": {
     "arms": [
@@ -391,8 +463,34 @@
       "converged": true,
       "divergences": 0,
       "draws": 4000,
-      "max_rhat": 1.0053410277208195,
-      "min_ess_bulk": 996.8976523430631
+      "max_rhat": 1.0065122226554448,
+      "min_ess_bulk": 996.8976523430631,
+      "parameters_checked": [
+        "a0",
+        "z_base_market",
+        "z_base_device",
+        "z_base_tenure",
+        "z_base_cell",
+        "effect_mean",
+        "z_effect_market",
+        "z_effect_device",
+        "z_effect_tenure",
+        "z_effect_market_x_device",
+        "z_effect_market_x_tenure",
+        "z_effect_device_x_tenure",
+        "z_effect_cell",
+        "sd_base_market",
+        "sd_base_device",
+        "sd_base_tenure",
+        "sd_base_cell",
+        "sd_effect_market",
+        "sd_effect_device",
+        "sd_effect_tenure",
+        "sd_effect_market_x_device",
+        "sd_effect_market_x_tenure",
+        "sd_effect_device_x_tenure",
+        "sd_effect_cell"
+      ]
     },
     "factors": [
       "market",
@@ -2834,15 +2932,18 @@
     },
     "truth_check": {
       "bundle": {
-        "pooled_rmse": 0.054248708286846595,
+        "cells": 71,
+        "pooled_rmse": 0.05390619496696305,
         "raw_rmse": 0.40587392032809577
       },
       "free_shipping": {
-        "pooled_rmse": 0.10893216388261175,
+        "cells": 71,
+        "pooled_rmse": 0.1094551197290958,
         "raw_rmse": 0.49151807584931806
       },
       "pct10_discount": {
-        "pooled_rmse": 0.052533468834962856,
+        "cells": 71,
+        "pooled_rmse": 0.052559820428423644,
         "raw_rmse": 0.549309658178158
       }
     }
@@ -3031,7 +3132,7 @@
       "plan_mde": 0.1,
       "prior_sensitivity": true,
       "rope": 0.02,
-      "run_id": "release",
+      "run_id": "release-2",
       "seed": 11,
       "source": "simulated",
       "target_accept": 0.99,
@@ -3040,7 +3141,7 @@
       "uplift_perm": 200
     },
     "config_fingerprint": "5aaec13f585491ff",
-    "git_commit": "32ed54b4c52d774350fc7204df810f48eb3a1609",
+    "git_commit": "017fd20f20d783f13561765cc6fdbbfc0770331b",
     "input_hashes": {
       "assignments.csv": "4339e8659efffe747edeba05d9dfc4d81849386c55ad8b4b739972d2fb4cf813",
       "conversions.csv": "986edf02c6c02b4f1ae9198bd2cfc246c6d5c5e7e36c255e209edce641f3f090",
@@ -3060,49 +3161,50 @@
       "scipy": "1.18.1"
     },
     "python": "3.12.10",
-    "run_id": "release",
+    "run_id": "release-2",
     "tasks": {
       "aggregate": {
-        "seconds": 0.87,
-        "started_at": "2026-10-20T02:03:58.738002+00:00",
+        "seconds": 0.9,
+        "started_at": "2026-10-20T04:28:25.572962+00:00",
         "status": "success"
       },
       "bundled": {
-        "seconds": 43.5,
-        "started_at": "2026-10-20T02:03:09.540297+00:00",
+        "seconds": 46.25,
+        "started_at": "2026-10-20T04:27:32.300966+00:00",
         "status": "success"
       },
       "extract": {
-        "seconds": 1.85,
-        "started_at": "2026-10-20T02:03:53.092039+00:00",
+        "seconds": 2.98,
+        "started_at": "2026-10-20T04:28:18.607846+00:00",
         "status": "success"
       },
       "hierarchical": {
-        "seconds": 360.05,
-        "started_at": "2026-10-20T02:03:59.721326+00:00",
+        "seconds": 414.86,
+        "started_at": "2026-10-20T04:28:26.596975+00:00",
         "status": "success"
       },
       "plan": {
-        "seconds": 1.23,
-        "started_at": "2026-10-20T02:03:08.247782+00:00",
+        "seconds": 1.31,
+        "started_at": "2026-10-20T04:27:30.930671+00:00",
         "status": "success"
       },
       "uplift": {
-        "seconds": 9.09,
-        "started_at": "2026-10-20T02:09:59.896526+00:00",
+        "seconds": 16.04,
+        "started_at": "2026-10-20T04:35:21.585082+00:00",
         "status": "success"
       },
       "validate": {
-        "seconds": 3.57,
-        "started_at": "2026-10-20T02:03:55.053566+00:00",
+        "seconds": 3.74,
+        "started_at": "2026-10-20T04:28:21.712980+00:00",
         "status": "success"
       }
     }
   },
   "plan": {
     "alpha": 0.05,
+    "assurance_rope": 0.02,
     "baseline": 0.069,
-    "bayesian_assurance": 0.8002,
+    "bayesian_assurance": 0.68655,
     "bonferroni_z": 2.3939797998185104,
     "buffer": 0.01,
     "correction": "Dunnett (many offers vs one control)",
@@ -3164,7 +3266,7 @@
       "pct10_discount": 0.7984
     }
   },
-  "run_id": "release",
+  "run_id": "release-2",
   "uplift": {
     "features": [
       "market",
@@ -3179,7 +3281,7 @@
           0.0,
           0.0
         ],
-        "conversion_rate": 0.06806837606837607,
+        "conversion_rate": 0.0681779269253159,
         "policy": "all_control",
         "prob_beats_baseline": 0.0,
         "rel_lift": 0.0,
@@ -3189,63 +3291,63 @@
         ]
       },
       {
-        "abs_lift": 0.0010598290598290566,
+        "abs_lift": 0.0008700173445925913,
         "abs_lift_ci": [
-          -0.0037478632478632405,
-          0.005128205128205131
+          -0.003754728350621703,
+          0.005198775437611658
         ],
-        "conversion_rate": 0.06912820512820513,
+        "conversion_rate": 0.06904794426990848,
         "policy": "all_pct10_discount",
-        "prob_beats_baseline": 0.688,
-        "rel_lift": 0.01557006529382221,
+        "prob_beats_baseline": 0.65,
+        "rel_lift": 0.012760982679124844,
         "rel_lift_ci": [
-          -0.05321207140948061,
-          0.07827299630708233
+          -0.052739028869014055,
+          0.07891473883779362
         ]
       },
       {
-        "abs_lift": 0.004547008547008541,
+        "abs_lift": 0.003981067469112504,
         "abs_lift_ci": [
-          0.00037435897435897657,
-          0.009061538461538458
+          -7.529921250458354e-05,
+          0.00827162985399098
         ],
-        "conversion_rate": 0.07261538461538461,
+        "conversion_rate": 0.0721589943944284,
         "policy": "all_free_shipping",
-        "prob_beats_baseline": 0.986,
-        "rel_lift": 0.06680060271220478,
+        "prob_beats_baseline": 0.97,
+        "rel_lift": 0.058392322099694915,
         "rel_lift_ci": [
-          0.005314725832604673,
-          0.13803801479269404
+          -0.0010649648574461263,
+          0.12489393193174698
         ]
       },
       {
-        "abs_lift": -3.4188034188031846e-05,
+        "abs_lift": 0.00025869182425422577,
         "abs_lift_ci": [
-          -0.004381196581196579,
-          0.004190598290598293
+          -0.0039051244396267493,
+          0.004569747536531885
         ],
-        "conversion_rate": 0.06803418803418804,
+        "conversion_rate": 0.06843661874957012,
         "policy": "all_bundle",
-        "prob_beats_baseline": 0.522,
-        "rel_lift": -0.000502260170768376,
+        "prob_beats_baseline": 0.554,
+        "rel_lift": 0.0037943633067283322,
         "rel_lift_ci": [
-          -0.06228669487685374,
-          0.06452971405478618
+          -0.05528179109658235,
+          0.0683057043010601
         ]
       },
       {
-        "abs_lift": 0.011418803418803414,
+        "abs_lift": 0.011011446371686828,
         "abs_lift_ci": [
-          0.00746752136752137,
-          0.015917094017094013
+          0.006999561186906155,
+          0.015054820237731888
         ],
-        "conversion_rate": 0.07948717948717948,
+        "conversion_rate": 0.07918937329700272,
         "policy": "targeted",
         "prob_beats_baseline": 1.0,
-        "rel_lift": 0.1677548970366649,
+        "rel_lift": 0.16151043113629848,
         "rel_lift_ci": [
-          0.10643284687587752,
-          0.23864646769234807
+          0.09938163805225471,
+          0.2273165778266073
         ]
       }
     ],

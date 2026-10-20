@@ -133,6 +133,11 @@ def _write(path: Path, payload) -> None:
 
 
 def _read(path: Path):
+    for attempt in range(20):
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except PermissionError:  # Windows: another task is swapping this file in right now
+            time.sleep(0.05 * (attempt + 1))
     return json.loads(path.read_text(encoding="utf-8"))
 
 
@@ -232,11 +237,12 @@ def task_hierarchical(config: PipelineConfig) -> None:
             true_lift = (merged[arm] / merged[arms[0]] - 1).to_numpy()
             raw = hb.raw_cell_lifts(fit, arm)
             ok = np.isfinite(raw)
+            pooled = hb.posterior_cell_lifts(fit, arm)
+            # Both errors over the same cells: the ones where a raw lift exists.
             errors[arm] = {
+                "cells": int(ok.sum()),
                 "raw_rmse": float(np.sqrt(np.mean((raw[ok] - true_lift[ok]) ** 2))),
-                "pooled_rmse": float(
-                    np.sqrt(np.mean((hb.posterior_cell_lifts(fit, arm) - true_lift) ** 2))
-                ),
+                "pooled_rmse": float(np.sqrt(np.mean((pooled[ok] - true_lift[ok]) ** 2))),
             }
         result["truth_check"] = errors
     if config.prior_sensitivity:

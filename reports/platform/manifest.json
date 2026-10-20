@@ -17,7 +17,7 @@
     "plan_mde": 0.1,
     "prior_sensitivity": true,
     "rope": 0.02,
-    "run_id": "release",
+    "run_id": "release-2",
     "seed": 11,
     "source": "simulated",
     "target_accept": 0.99,
@@ -26,7 +26,7 @@
     "uplift_perm": 200
   },
   "config_fingerprint": "5aaec13f585491ff",
-  "git_commit": "32ed54b4c52d774350fc7204df810f48eb3a1609",
+  "git_commit": "017fd20f20d783f13561765cc6fdbbfc0770331b",
   "input_hashes": {
     "assignments.csv": "4339e8659efffe747edeba05d9dfc4d81849386c55ad8b4b739972d2fb4cf813",
     "conversions.csv": "986edf02c6c02b4f1ae9198bd2cfc246c6d5c5e7e36c255e209edce641f3f090",
@@ -46,46 +46,46 @@
     "scipy": "1.18.1"
   },
   "python": "3.12.10",
-  "run_id": "release",
+  "run_id": "release-2",
   "tasks": {
     "aggregate": {
-      "seconds": 0.87,
-      "started_at": "2026-10-20T02:03:58.738002+00:00",
+      "seconds": 0.9,
+      "started_at": "2026-10-20T04:28:25.572962+00:00",
       "status": "success"
     },
     "bundled": {
-      "seconds": 43.5,
-      "started_at": "2026-10-20T02:03:09.540297+00:00",
+      "seconds": 46.25,
+      "started_at": "2026-10-20T04:27:32.300966+00:00",
       "status": "success"
     },
     "extract": {
-      "seconds": 1.85,
-      "started_at": "2026-10-20T02:03:53.092039+00:00",
+      "seconds": 2.98,
+      "started_at": "2026-10-20T04:28:18.607846+00:00",
       "status": "success"
     },
     "hierarchical": {
-      "seconds": 360.05,
-      "started_at": "2026-10-20T02:03:59.721326+00:00",
+      "seconds": 414.86,
+      "started_at": "2026-10-20T04:28:26.596975+00:00",
       "status": "success"
     },
     "plan": {
-      "seconds": 1.23,
-      "started_at": "2026-10-20T02:03:08.247782+00:00",
+      "seconds": 1.31,
+      "started_at": "2026-10-20T04:27:30.930671+00:00",
       "status": "success"
     },
     "report": {
-      "seconds": 0.04,
-      "started_at": "2026-10-20T02:10:09.093918+00:00",
+      "seconds": 0.1,
+      "started_at": "2026-10-20T04:35:37.789080+00:00",
       "status": "success"
     },
     "uplift": {
-      "seconds": 9.09,
-      "started_at": "2026-10-20T02:09:59.896526+00:00",
+      "seconds": 16.04,
+      "started_at": "2026-10-20T04:35:21.585082+00:00",
       "status": "success"
     },
     "validate": {
-      "seconds": 3.57,
-      "started_at": "2026-10-20T02:03:55.053566+00:00",
+      "seconds": 3.74,
+      "started_at": "2026-10-20T04:28:21.712980+00:00",
       "status": "success"
     }
   }
