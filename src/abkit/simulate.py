@@ -175,8 +175,9 @@ def simulate(config: ExperimentConfig | None = None) -> Experiment:
     converted = rng.random(n) < probability
     delay = pd.to_timedelta(rng.exponential(cfg.mean_conversion_delay_days, n), unit="D")
     converted_at = assigned_at + delay
-    in_window = delay <= pd.Timedelta(days=cfg.conversion_window_days)
-    happened = converted & in_window & (converted_at <= pd.Timestamp(cfg.cutoff))
+    # Every conversion that happened before the data pull is logged, even after the
+    # conversion window. The analysis applies the window, the way a platform would.
+    happened = converted & (converted_at <= pd.Timestamp(cfg.cutoff))
     discount = pd.Series(arms).map(OFFER_COST_SHARE).to_numpy()
     revenue = rng.lognormal(np.log(AVERAGE_ORDER_VALUE), 0.45, n) * (1 - discount)
     conversions = pd.DataFrame(
