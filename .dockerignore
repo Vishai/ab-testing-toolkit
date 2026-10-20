@@ -1,0 +1,13 @@
+.git
+.venv
+venv
+artifacts
+**/__pycache__
+**/*.py[cod]
+.pytest_cache
+.ruff_cache
+.ipynb_checkpoints
+*.egg-info
+.env
+infra/aws/.terraform
+infra/aws/*.tfstate*

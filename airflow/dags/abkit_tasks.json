@@ -1,0 +1,25 @@
+{
+  "plan": [],
+  "bundled": [],
+  "extract": [
+    "plan"
+  ],
+  "validate": [
+    "extract"
+  ],
+  "aggregate": [
+    "validate"
+  ],
+  "hierarchical": [
+    "validate"
+  ],
+  "uplift": [
+    "validate"
+  ],
+  "report": [
+    "aggregate",
+    "hierarchical",
+    "uplift",
+    "bundled"
+  ]
+}

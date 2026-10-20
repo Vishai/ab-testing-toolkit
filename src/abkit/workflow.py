@@ -300,6 +300,15 @@ TASKS: tuple[TaskSpec, ...] = (
 TASKS_BY_NAME = {task.name: task for task in TASKS}
 
 
+QUICK = {"draws": 300, "tune": 500, "chains": 2, "prior_sensitivity": False,
+         "uplift_boot": 100, "uplift_perm": 30}
+
+
+def task_graph() -> dict[str, list[str]]:
+    """Task name -> upstream task names, in run order."""
+    return {name: list(TASKS_BY_NAME[name].upstream) for name in topological_order()}
+
+
 def topological_order(tasks: tuple[TaskSpec, ...] = TASKS) -> list[str]:
     order, done = [], set()
     pending = list(tasks)
@@ -413,13 +422,26 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--only", nargs="*", choices=[t.name for t in TASKS])
     run.add_argument("--force", action="store_true", help="Rerun tasks that already succeeded")
     run.add_argument("--quick", action="store_true", help="Fewer draws, for smoke tests")
+    run.add_argument("--overrides", default="{}",
+                     help='JSON of PipelineConfig fields, e.g. \'{"seed": 3}\' or \'{"quick": true}\'')
+    graph = sub.add_parser("graph", help="Print the task graph as JSON (used by the Airflow DAG)")
+    graph.add_argument("--output", type=Path)
     args = parser.parse_args(argv)
+    if args.command == "graph":
+        text = json.dumps(task_graph(), indent=2) + "\n"
+        if args.output:
+            args.output.write_text(text, encoding="utf-8")
+        else:
+            print(text, end="")
+        return 0
 
     values = _read(args.config) if args.config else {}
+    overrides = json.loads(args.overrides or "{}")
+    quick = bool(overrides.pop("quick", False)) or args.quick
     values |= {"run_id": args.run_id, "output_root": args.output_root, "source": args.source}
-    if args.quick:
-        values |= {"draws": 300, "tune": 500, "chains": 2, "prior_sensitivity": False,
-                   "uplift_boot": 100, "uplift_perm": 30}
+    if quick:
+        values |= QUICK
+    values |= overrides
     config = PipelineConfig.from_dict(values)
     try:
         manifest = run_pipeline(config, only=args.only, force=args.force)

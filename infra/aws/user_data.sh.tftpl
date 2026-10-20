@@ -1,0 +1,31 @@
+#!/bin/bash
+# First boot: install Docker, fetch the repo and start the Airflow stack.
+set -euxo pipefail
+
+dnf install -y docker git
+systemctl enable --now docker
+
+mkdir -p /usr/local/lib/docker/cli-plugins
+curl -fsSL -o /usr/local/lib/docker/cli-plugins/docker-compose \
+  "https://github.com/docker/compose/releases/download/v2.29.7/docker-compose-linux-x86_64"
+chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+
+git clone "${repo_url}" /opt/abkit
+cd /opt/abkit
+git checkout "${repo_ref}"
+
+mkdir -p artifacts
+chown -R 50000:0 artifacts
+
+admin_password="$(aws ssm get-parameter --region "${region}" --with-decryption \
+  --name "${password_param}" --query Parameter.Value --output text)"
+cat > .env <<ENV
+AIRFLOW_UID=50000
+AIRFLOW_ADMIN_USER=admin
+AIRFLOW_ADMIN_PASSWORD=$admin_password
+AIRFLOW_SECRET_KEY=$(openssl rand -hex 32)
+ABKIT_S3_URI=${s3_uri}
+ENV
+chmod 600 .env
+
+docker compose up -d --build
