@@ -9,3 +9,10 @@ venv/
 .DS_Store
 Thumbs.db
 artifacts/
+
+.terraform/
+*.tfstate
+*.tfstate.*
+infra/aws/terraform.tfvars
+.env
+build/
