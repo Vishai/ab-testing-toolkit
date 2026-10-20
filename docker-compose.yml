@@ -3,6 +3,7 @@
 #   mkdir -p artifacts && echo "AIRFLOW_UID=$(id -u)" > .env
 #   docker compose up -d --build
 #   open http://localhost:8080   (user and password from AIRFLOW_ADMIN_USER / _PASSWORD, default admin / admin)
+#   open http://localhost:8501   posterior effects dashboard for finished runs
 #
 # Set ABKIT_S3_URI in .env to publish every finished run to S3.
 
@@ -74,6 +75,19 @@ services:
         condition: service_healthy
       airflow-init:
         condition: service_completed_successfully
+    restart: unless-stopped
+
+  dashboard:
+    build: .
+    image: abkit:local
+    command: ["python", "-m", "streamlit", "run", "app/posterior_dashboard.py",
+              "--server.port", "8501", "--server.address", "0.0.0.0", "--server.headless", "true"]
+    environment:
+      ABKIT_RUNS_DIR: /app/artifacts/runs
+    volumes:
+      - ./artifacts:/app/artifacts:ro
+    ports:
+      - "8501:8501"
     restart: unless-stopped
 
 volumes:
