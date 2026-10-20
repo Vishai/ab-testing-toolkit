@@ -1,7 +1,8 @@
 {
   "alpha": 0.05,
+  "assurance_rope": 0.02,
   "baseline": 0.069,
-  "bayesian_assurance": 0.8002,
+  "bayesian_assurance": 0.68655,
   "bonferroni_z": 2.3939797998185104,
   "buffer": 0.01,
   "correction": "Dunnett (many offers vs one control)",
