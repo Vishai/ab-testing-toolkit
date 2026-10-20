@@ -215,3 +215,45 @@ def test_a_significantly_worse_offer_is_never_called_a_winner():
     text = " ".join(findings(bundle))
     assert "winner: a" not in text
     assert "a made things worse" in text
+
+
+def test_parallel_tasks_never_lose_each_others_records(tmp_path, monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+
+    names = [f"noop{i}" for i in range(8)]
+    specs = {name: workflow.TaskSpec(name, lambda config: None, (), ()) for name in names}
+    monkeypatch.setattr(workflow, "TASKS_BY_NAME", {**workflow.TASKS_BY_NAME, **specs})
+    config = quick_config(tmp_path, "parallel")
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        list(pool.map(lambda name: workflow.run_task(name, config), names))
+    manifest = workflow.load_manifest(config)
+    assert set(names) <= set(manifest["tasks"])
+    json.loads((config.run_dir / "manifest.json").read_text())
+
+
+def test_a_task_will_not_run_before_its_upstream_succeeded(tmp_path):
+    config = quick_config(tmp_path, "ordering")
+    with pytest.raises(RuntimeError, match="upstream"):
+        workflow.run_task("aggregate", config)
+
+
+def test_a_refused_config_does_not_overwrite_the_saved_one(tmp_path):
+    config = quick_config(tmp_path, "keep")
+    run_pipeline(config, only=["plan"])
+    saved = (config.run_dir / "config.json").read_text()
+    changed = PipelineConfig.from_dict(config.to_dict() | {"seed": 999})
+    with pytest.raises(ValueError, match="different config"):
+        run_pipeline(changed, only=["plan"])
+    assert (config.run_dir / "config.json").read_text() == saved
+
+
+def test_changed_source_data_is_refused(tmp_path):
+    folder = tmp_path / "logs"
+    experiment = simulate(ExperimentConfig(n_users=5_000, seed=4))
+    save_experiment(experiment, folder)
+    config = quick_config(tmp_path, "source", source=str(folder))
+    run_pipeline(config, only=["plan", "extract"])
+    users = folder / "users.csv"
+    users.write_text(users.read_text() + "u9999999,US,mobile,new,2025-09-01\n")
+    with pytest.raises(ValueError, match="source data changed"):
+        run_pipeline(config)

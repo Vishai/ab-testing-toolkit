@@ -25,9 +25,11 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import platform
 import subprocess
 import sys
+import threading
 import time
 from collections.abc import Callable
 from dataclasses import asdict, dataclass, field, fields
@@ -116,8 +118,18 @@ class PipelineConfig:
 
 
 def _write(path: Path, payload) -> None:
+    """Write JSON atomically: readers see the old file or the new one, never half of one."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(to_jsonable(payload), indent=2, sort_keys=True), encoding="utf-8")
+    temporary = path.with_name(f"{path.name}.{os.getpid()}.{threading.get_ident()}.tmp")
+    temporary.write_text(json.dumps(to_jsonable(payload), indent=2, sort_keys=True),
+                         encoding="utf-8")
+    for attempt in range(20):
+        try:
+            os.replace(temporary, path)
+            return
+        except PermissionError:  # Windows: a reader has the target open for a moment
+            time.sleep(0.05 * (attempt + 1))
+    os.replace(temporary, path)
 
 
 def _read(path: Path):
@@ -170,8 +182,10 @@ def task_extract(config: PipelineConfig) -> None:
     else:
         experiment = load_experiment(config.source)
     hashes = save_experiment(experiment, target)
-    _write(config.run_dir / "extract.json", {"source": config.source, "files": hashes,
-                                             "users": len(experiment.users)})
+    record = {"source": config.source, "files": hashes, "users": len(experiment.users)}
+    if config.source != "simulated":
+        record["source_files"] = file_hashes(config.source)
+    _write(config.run_dir / "extract.json", record)
 
 
 def task_validate(config: PipelineConfig) -> None:
@@ -345,27 +359,65 @@ def _versions() -> dict[str, str]:
     return found
 
 
-def _manifest_path(config: PipelineConfig) -> Path:
-    return config.run_dir / "manifest.json"
+def _header_path(config: PipelineConfig) -> Path:
+    return config.run_dir / "manifest_header.json"
+
+
+def _task_record_path(config: PipelineConfig, name: str) -> Path:
+    return config.run_dir / "tasks" / f"{name}.json"
 
 
 def load_manifest(config: PipelineConfig) -> dict:
-    path = _manifest_path(config)
-    if path.exists():
-        return _read(path)
-    return {"run_id": config.run_id, "config": config.to_dict(),
-            "config_fingerprint": config.fingerprint, "tasks": {}}
+    """The run's manifest, assembled from one record file per task.
+
+    Tasks that run at the same time (Airflow runs aggregate, hierarchical, uplift
+    and bundled in parallel) each write only their own record, so none of them can
+    overwrite another's. manifest.json is a snapshot of this for people and tools.
+    """
+    header_path = _header_path(config)
+    header = _read(header_path) if header_path.exists() else {
+        "run_id": config.run_id, "config": config.to_dict(),
+        "config_fingerprint": config.fingerprint,
+    }
+    tasks_dir = config.run_dir / "tasks"
+    records = {path.stem: _read(path) for path in sorted(tasks_dir.glob("*.json"))} \
+        if tasks_dir.exists() else {}
+    return header | {"tasks": records}
 
 
-def run_task(name: str, config: PipelineConfig) -> dict:
-    """Run one task and record it in the manifest. This is what Airflow calls."""
-    task = TASKS_BY_NAME[name]
-    config.run_dir.mkdir(parents=True, exist_ok=True)
-    manifest = load_manifest(config)
-    if manifest["config_fingerprint"] != config.fingerprint:
+def _check_fingerprint(config: PipelineConfig) -> None:
+    header_path = _header_path(config)
+    if header_path.exists() and _read(header_path)["config_fingerprint"] != config.fingerprint:
         raise ValueError(
             f"run {config.run_id} was started with a different config; use a new run id"
         )
+
+
+def _write_header(config: PipelineConfig) -> None:
+    header = {
+        "run_id": config.run_id,
+        "config": config.to_dict(),
+        "config_fingerprint": config.fingerprint,
+        "git_commit": _git_commit(),
+        "python": platform.python_version(),
+        "packages": _versions(),
+    }
+    if (config.run_dir / "experiment").exists():
+        header["input_hashes"] = file_hashes(config.run_dir / "experiment")
+    _write(_header_path(config), header)
+
+
+def run_task(name: str, config: PipelineConfig) -> dict:
+    """Run one task and record it. This is what each Airflow task calls."""
+    task = TASKS_BY_NAME[name]
+    config.run_dir.mkdir(parents=True, exist_ok=True)
+    _check_fingerprint(config)
+    if not _header_path(config).exists():
+        _write_header(config)
+    records = load_manifest(config)["tasks"]
+    waiting = [up for up in task.upstream if records.get(up, {}).get("status") != "success"]
+    if waiting:
+        raise RuntimeError(f"{name} can't run: upstream {', '.join(waiting)} has not succeeded")
     started = time.perf_counter()
     record = {"started_at": datetime.now(UTC).isoformat()}
     try:
@@ -381,22 +433,29 @@ def run_task(name: str, config: PipelineConfig) -> dict:
         raise
     finally:
         record["seconds"] = round(time.perf_counter() - started, 2)
-        manifest = load_manifest(config)
-        manifest["tasks"][name] = record
-        manifest |= {
-            "git_commit": _git_commit(),
-            "python": platform.python_version(),
-            "packages": _versions(),
-        }
-        if (config.run_dir / "experiment").exists():
-            manifest["input_hashes"] = file_hashes(config.run_dir / "experiment")
-        _write(_manifest_path(config), manifest)
+        _write(_task_record_path(config, name), record)
+        _write_header(config)
+        _write(config.run_dir / "manifest.json", load_manifest(config))
     return record
+
+
+def _check_source_unchanged(config: PipelineConfig) -> None:
+    extract = config.run_dir / "extract.json"
+    if config.source == "simulated" or not extract.exists():
+        return
+    recorded = _read(extract).get("source_files")
+    if recorded is not None and recorded != file_hashes(config.source):
+        raise ValueError(
+            f"source data changed since run {config.run_id} extracted it; use a new run id"
+        )
 
 
 def run_pipeline(config: PipelineConfig, only: list[str] | None = None,
                  force: bool = False) -> dict:
     """Run every task in dependency order, skipping ones that already succeeded."""
+    config.run_dir.mkdir(parents=True, exist_ok=True)
+    _check_fingerprint(config)
+    _check_source_unchanged(config)
     _write(config.run_dir / "config.json", config.to_dict())
     manifest = load_manifest(config)
     for name in topological_order():

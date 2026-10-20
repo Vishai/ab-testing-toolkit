@@ -18,12 +18,22 @@ def _read(run_dir: Path, name: str):
     return json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
 
 
+def _manifest(folder: Path) -> dict | None:
+    """Header plus every task's own record file, so nothing written in parallel is missed."""
+    header = _read(folder, "manifest_header.json")
+    if header is None:
+        return _read(folder, "manifest.json")
+    tasks = {path.stem: json.loads(path.read_text(encoding="utf-8"))
+             for path in sorted((folder / "tasks").glob("*.json"))}
+    return header | {"tasks": tasks}
+
+
 def build_dashboard_data(run_dir: Path | str) -> dict:
     """Everything the dashboard shows, from one run, in one JSON-ready dict."""
     folder = Path(run_dir)
     bundle = {
         "run_id": folder.name,
-        "manifest": _read(folder, "manifest.json"),
+        "manifest": _manifest(folder),
         "plan": _read(folder, "plan.json"),
         "extract": _read(folder, "extract.json"),
         "integrity": _read(folder, "integrity.json"),
