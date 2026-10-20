@@ -47,7 +47,7 @@ class SamplerSettings:
     draws: int = 1_000
     tune: int = 1_500
     chains: int = 4
-    target_accept: float = 0.98
+    target_accept: float = 0.99
     seed: int = 11
     backend: str = "auto"  # "numpyro", "pymc", or "auto" (numpyro when installed)
 
@@ -90,6 +90,15 @@ def cells_from_frame(
         .rename(columns={arm_column: "arm"})
     )
     return wide
+
+
+def cells_from_sessions(sessions: pd.DataFrame, factors: Sequence[str]) -> pd.DataFrame:
+    """Adapter for the bundled session datasets (group A/B, Conversion 0/1)."""
+    frame = sessions.assign(
+        arm=sessions["group"].map({"A": "control", "B": "variation"}),
+        converted=sessions["Conversion"],
+    )
+    return cells_from_frame(frame, factors)
 
 
 def _prepare(cells: pd.DataFrame, factors: Sequence[str], arms: Sequence[str]):
@@ -414,3 +423,42 @@ def raw_cell_lifts(fit: HierarchicalFit, arm: str) -> np.ndarray:
 def posterior_cell_lifts(fit: HierarchicalFit, arm: str) -> np.ndarray:
     rates = fit.rate_draws
     return (rates[:, :, fit.arms.index(arm)] / rates[:, :, 0] - 1).mean(axis=0)
+
+
+SENSITIVITY_PRIORS = {
+    "default": Priors(),
+    "skeptical": Priors(effect_mean_sd=0.1, effect_factor_sd=0.1, effect_cell_sd=0.05),
+    "wide": Priors(effect_mean_sd=1.0, effect_factor_sd=0.75, effect_cell_sd=0.3),
+}
+
+
+def prior_sensitivity(
+    cells: pd.DataFrame,
+    factors: Sequence[str],
+    arms: Sequence[str],
+    priors: dict[str, Priors] | None = None,
+    sampler: SamplerSettings | None = None,
+    rope: float = DEFAULT_ROPE,
+) -> pd.DataFrame:
+    """Refit under skeptical and wide priors and see whether the conclusion moves.
+
+    If an offer's verdict flips between priors, the data alone isn't strong enough
+    to settle it and the prior is doing the work.
+    """
+    rows = []
+    for name, prior in (priors or SENSITIVITY_PRIORS).items():
+        result = fit(cells, factors, arms, priors=prior, sampler=sampler, prior_samples=50)
+        for arm in result.arms[1:]:
+            summary = summarize_lift(result, arm, rope=rope)
+            rows.append(
+                {
+                    "prior": name,
+                    "arm": arm,
+                    "rel_lift_mean": summary["rel_lift_mean"],
+                    "ci_low": summary["rel_lift_ci"][0],
+                    "ci_high": summary["rel_lift_ci"][1],
+                    "prob_positive": summary["prob_positive"],
+                    "verdict": summary["verdict"],
+                }
+            )
+    return pd.DataFrame(rows)
