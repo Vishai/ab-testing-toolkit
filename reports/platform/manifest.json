@@ -1,0 +1,92 @@
+{
+  "config": {
+    "alpha": 0.05,
+    "bundled_scenarios": [
+      "online_education",
+      "travel_booking",
+      "charity_donations",
+      "free_trial"
+    ],
+    "chains": 4,
+    "draws": 1000,
+    "experiment": {},
+    "halt_on": "fail",
+    "output_root": "artifacts/runs",
+    "plan_baseline": 0.069,
+    "plan_daily_users": 5500,
+    "plan_mde": 0.1,
+    "prior_sensitivity": true,
+    "rope": 0.02,
+    "run_id": "release",
+    "seed": 11,
+    "source": "simulated",
+    "target_accept": 0.99,
+    "tune": 1500,
+    "uplift_boot": 500,
+    "uplift_perm": 200
+  },
+  "config_fingerprint": "5aaec13f585491ff",
+  "git_commit": "32ed54b4c52d774350fc7204df810f48eb3a1609",
+  "input_hashes": {
+    "assignments.csv": "4339e8659efffe747edeba05d9dfc4d81849386c55ad8b4b739972d2fb4cf813",
+    "conversions.csv": "986edf02c6c02b4f1ae9198bd2cfc246c6d5c5e7e36c255e209edce641f3f090",
+    "experiment.json": "9eac625d897bdd442203d58d989ffceb8e7adddb117f4bf7440d812d019c9626",
+    "exposures.csv": "20ddec51483bb90b4caeda62576cf279c18b856dd4d29a508fd13a7f1fe63e52",
+    "truth.csv": "9d9cf55d8bc6e93342ac6ee2bcd51d1aae27cf51e2dd3cb8a781c3be568c9ee7",
+    "users.csv": "c32134bfe844d90ae373beb6167aee29881b4747aba624fcc49fd8875e687934"
+  },
+  "packages": {
+    "abkit": "0.2.0",
+    "arviz": "1.3.0",
+    "numpy": "2.5.4",
+    "numpyro": "0.22.0",
+    "pandas": "3.0.6",
+    "pymc": "6.3.2",
+    "scikit-learn": "1.9.1",
+    "scipy": "1.18.1"
+  },
+  "python": "3.12.10",
+  "run_id": "release",
+  "tasks": {
+    "aggregate": {
+      "seconds": 0.87,
+      "started_at": "2026-10-20T02:03:58.738002+00:00",
+      "status": "success"
+    },
+    "bundled": {
+      "seconds": 43.5,
+      "started_at": "2026-10-20T02:03:09.540297+00:00",
+      "status": "success"
+    },
+    "extract": {
+      "seconds": 1.85,
+      "started_at": "2026-10-20T02:03:53.092039+00:00",
+      "status": "success"
+    },
+    "hierarchical": {
+      "seconds": 360.05,
+      "started_at": "2026-10-20T02:03:59.721326+00:00",
+      "status": "success"
+    },
+    "plan": {
+      "seconds": 1.23,
+      "started_at": "2026-10-20T02:03:08.247782+00:00",
+      "status": "success"
+    },
+    "report": {
+      "seconds": 0.04,
+      "started_at": "2026-10-20T02:10:09.093918+00:00",
+      "status": "success"
+    },
+    "uplift": {
+      "seconds": 9.09,
+      "started_at": "2026-10-20T02:09:59.896526+00:00",
+      "status": "success"
+    },
+    "validate": {
+      "seconds": 3.57,
+      "started_at": "2026-10-20T02:03:55.053566+00:00",
+      "status": "success"
+    }
+  }
+}
