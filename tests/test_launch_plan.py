@@ -44,7 +44,7 @@ def test_the_plan_holds_up_in_simulation():
     plan = plan_launch(0.069, ARMS[1:])
     assert all(0.77 < p < 0.83 for p in plan["simulated_power_at_mde"].values())
     assert plan["simulated_familywise_error"] == pytest.approx(0.05, abs=0.006)
-    assert 0.7 < plan["bayesian_assurance"] < 0.9
+    assert 0.6 < plan["bayesian_assurance"] < 0.75
 
 
 def test_small_segments_cannot_detect_much_alone():
@@ -80,3 +80,14 @@ def test_aggregate_readout_adjusts_for_several_offers():
     assert rows["a"]["p_dunnett"] >= rows["a"]["p_value"]
     assert not rows["b"]["significant"] and not rows["c"]["significant"]
     assert rows["b"]["p_dunnett"] > rows["b"]["p_value"]
+
+
+def test_assurance_uses_the_same_rule_as_the_readout():
+    from abkit.hierarchical import DEFAULT_ROPE
+
+    loose = bayesian_assurance(0.069, 28_723, 0.10, 0.05, rope=0.0)
+    readout_rule = bayesian_assurance(0.069, 28_723, 0.10, 0.05, rope=DEFAULT_ROPE)
+    assert readout_rule < loose
+    plan = plan_launch(0.069, ARMS[1:])
+    assert plan["bayesian_assurance"] == readout_rule
+    assert plan["assurance_rope"] == DEFAULT_ROPE
