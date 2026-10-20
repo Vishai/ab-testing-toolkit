@@ -4,12 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "abkit"
-version = "0.1.0"
-description = "A trustworthy A/B test analysis toolkit: trust checks, frequentist + Bayesian inference, power, segments and uplift modelling."
+version = "0.2.0"
+description = "Bayesian experimentation and uplift modelling: hierarchical PyMC models, multi-offer uplift, trust checks, power analysis and Airflow pipelines."
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
-authors = [{ name = "Cyrus (Sirous) Namjoo" }]
+authors = [{ name = "Cyrus (Sirous) Namjoo" }, { name = "Brandon Armstrong" }]
 dependencies = [
     "numpy>=2.0",
     "pandas>=2.1",

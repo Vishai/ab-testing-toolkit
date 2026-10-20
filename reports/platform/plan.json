@@ -1,0 +1,65 @@
+{
+  "alpha": 0.05,
+  "baseline": 0.069,
+  "bayesian_assurance": 0.8002,
+  "bonferroni_z": 2.3939797998185104,
+  "buffer": 0.01,
+  "correction": "Dunnett (many offers vs one control)",
+  "critical_z": 2.3489705905178804,
+  "daily_users": 5500,
+  "mde_rel": 0.1,
+  "n_per_arm": 28723,
+  "offers": [
+    "pct10_discount",
+    "free_shipping",
+    "bundle"
+  ],
+  "planned_users": 117000,
+  "power": 0.8,
+  "required_users": 114892,
+  "runtime_days": 22,
+  "segments": [
+    {
+      "detectable_lift": 0.1609022523600936,
+      "segment": "US",
+      "share": 0.3,
+      "users_per_arm": 8775.0
+    },
+    {
+      "detectable_lift": 0.46638295712318656,
+      "segment": "SE",
+      "share": 0.04,
+      "users_per_arm": 1170.0
+    },
+    {
+      "detectable_lift": 0.46638295712318656,
+      "segment": "ES",
+      "share": 0.04,
+      "users_per_arm": 1170.0
+    },
+    {
+      "detectable_lift": 0.46638295712318656,
+      "segment": "IT",
+      "share": 0.04,
+      "users_per_arm": 1170.0
+    },
+    {
+      "detectable_lift": 0.6826477595884308,
+      "segment": "IE",
+      "share": 0.02,
+      "users_per_arm": 585.0
+    },
+    {
+      "detectable_lift": 0.6826477595884308,
+      "segment": "NZ",
+      "share": 0.02,
+      "users_per_arm": 585.0
+    }
+  ],
+  "simulated_familywise_error": 0.05095,
+  "simulated_power_at_mde": {
+    "bundle": 0.797,
+    "free_shipping": 0.7946,
+    "pct10_discount": 0.7984
+  }
+}
