@@ -126,13 +126,17 @@ def test_pipeline_reads_a_folder_of_real_format_logs(tmp_path):
     assert json.loads((config.run_dir / "aggregate.json").read_text())["users"] > 0
 
 
+def test_exported_graph_matches_the_task_list():
+    exported = json.loads((ROOT / "airflow" / "dags" / "abkit_tasks.json").read_text())
+    assert exported == workflow.task_graph()
+
+
 def test_airflow_dag_mirrors_the_task_graph(monkeypatch):
     created, edges = {}, []
 
     class FakeOperator:
-        def __init__(self, task_id, python_callable, op_kwargs=None, retries=None, **_):
-            self.task_id, self.callable, self.kwargs, self.retries = (
-                task_id, python_callable, op_kwargs or {}, retries)
+        def __init__(self, task_id, bash_command, retries=None, **_):
+            self.task_id, self.command, self.retries = task_id, bash_command, retries
             created[task_id] = self
 
         def __rshift__(self, other):
@@ -152,12 +156,13 @@ def test_airflow_dag_mirrors_the_task_graph(monkeypatch):
     airflow = types.ModuleType("airflow")
     airflow.DAG = FakeDAG
     operators = types.ModuleType("airflow.operators")
-    python = types.ModuleType("airflow.operators.python")
-    python.PythonOperator = FakeOperator
+    bash = types.ModuleType("airflow.operators.bash")
+    bash.BashOperator = FakeOperator
     monkeypatch.setitem(sys.modules, "airflow", airflow)
     monkeypatch.setitem(sys.modules, "airflow.operators", operators)
-    monkeypatch.setitem(sys.modules, "airflow.operators.python", python)
+    monkeypatch.setitem(sys.modules, "airflow.operators.bash", bash)
     monkeypatch.setenv("ABKIT_S3_URI", "s3://bucket/readouts")
+    monkeypatch.setenv("ABKIT_PYTHON", "/venv/bin/python")
 
     spec = importlib.util.spec_from_file_location(
         "abkit_dag", ROOT / "airflow" / "dags" / "abkit_experiment.py")
@@ -169,16 +174,19 @@ def test_airflow_dag_mirrors_the_task_graph(monkeypatch):
     expected = {(up, t.name) for t in workflow.TASKS for up in t.upstream} | {("report", "publish")}
     assert set(edges) == expected
     assert created["validate"].retries == 0
-    assert created["hierarchical"].kwargs == {"task_name": "hierarchical",
-                                              "run_id": "{{ ds_nodash }}"}
+    command = created["hierarchical"].command
+    assert command.startswith("/venv/bin/python -m abkit.workflow run --only hierarchical")
+    assert "--run-id {{ ds_nodash }}" in command
+    assert "dag_run.conf" in command
+    assert created["publish"].command.endswith("s3://bucket/readouts")
 
-    calls = []
-    monkeypatch.setattr(module, "run_task", lambda name, config: calls.append((name, config)))
-    created["uplift"].callable(task_name="uplift", run_id="20250923",
-                               dag_run=types.SimpleNamespace(conf={"quick": True, "seed": 3}))
-    name, config = calls[0]
-    assert name == "uplift" and config.run_id == "20250923"
-    assert config.draws == 300 and config.seed == 3
+
+def test_cli_overrides_match_what_airflow_passes(tmp_path):
+    code = workflow.main(["run", "--run-id", "conf", "--output-root", str(tmp_path),
+                          "--only", "plan", "--overrides", '{"quick": true, "seed": 3}'])
+    assert code == 0
+    saved = json.loads((tmp_path / "conf" / "config.json").read_text())
+    assert saved["draws"] == 300 and saved["seed"] == 3
 
 
 def test_publish_uploads_results_but_not_raw_logs(finished):
