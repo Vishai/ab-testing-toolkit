@@ -8,3 +8,4 @@ venv/
 .streamlit/secrets.toml
 .DS_Store
 Thumbs.db
+artifacts/
