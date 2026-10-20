@@ -109,7 +109,8 @@ with tabs[0]:
     if integrity:
         cols[0].metric("Trust checks", integrity["overall"].upper())
     if aggregate:
-        winners = [o["offer"] for o in aggregate["offers"] if o["significant"]]
+        winners = [o["offer"] for o in aggregate["offers"]
+                   if o["significant"] and o["rel_lift"] > 0]
         cols[1].metric("Aggregate A/B winner", ", ".join(winners) or "none",
                        help="Each offer vs control, Dunnett-adjusted, as the launch plan specified.")
     if uplift:
