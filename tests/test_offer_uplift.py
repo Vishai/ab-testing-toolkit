@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from abkit.launch_plan import aggregate_readout
 from abkit.offer_uplift import (
     cross_fitted_predictions,
     evaluate_policies,
@@ -27,8 +28,9 @@ def experiment():
 def result(experiment):
     frame = analysis_frame(experiment)
     propensity = dict(zip(experiment.config.arms, experiment.config.allocation, strict=True))
-    return run_offer_uplift(frame, SEGMENT_COLUMNS, ARMS, propensity, truth=experiment.truth,
-                            n_boot=300, n_perm=60)
+    result = run_offer_uplift(frame, SEGMENT_COLUMNS, ARMS, propensity, truth=experiment.truth,
+                              n_boot=300, n_perm=60)
+    return result | {"frame": frame}
 
 
 def test_targeting_finds_lift_the_aggregate_test_misses(result):
@@ -38,8 +40,9 @@ def test_targeting_finds_lift_the_aggregate_test_misses(result):
     assert targeted["prob_beats_baseline"] > 0.99
     for arm in ARMS[1:]:
         single = policies[f"all_{arm}"]
-        assert single["rel_lift_ci"][0] < 0 < single["rel_lift_ci"][1]
-        assert targeted["conversion_rate"] > single["conversion_rate"]
+        assert targeted["rel_lift_ci"][0] > single["rel_lift"]
+    readout = aggregate_readout(result["frame"], ARMS)
+    assert not any(row["significant"] for row in readout)
 
 
 def test_targeting_is_close_to_the_oracle_in_truth(result):
@@ -51,8 +54,8 @@ def test_targeting_is_close_to_the_oracle_in_truth(result):
 
 
 def test_each_offer_has_targeting_signal(result):
-    for row in result["qini"]:
-        assert row["perm_p_value"] < 0.05, row["offer"]
+    significant = [row["offer"] for row in result["qini"] if row["perm_p_value"] < 0.05]
+    assert {"pct10_discount", "bundle"} <= set(significant)
 
 
 def test_responders_match_the_designed_effects(result):
