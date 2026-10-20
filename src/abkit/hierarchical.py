@@ -109,7 +109,7 @@ def cells_from_sessions(sessions: pd.DataFrame, factors: Sequence[str]) -> pd.Da
 def _prepare(cells: pd.DataFrame, factors: Sequence[str], arms: Sequence[str]):
     table = cells.pivot_table(
         index=list(factors), columns="arm", values=["users", "conversions"], fill_value=0,
-        observed=True,
+        observed=True, aggfunc="sum",
     )
     table = table.sort_index()
     users = np.column_stack([table["users"].get(arm, 0) for arm in arms]).astype(int)
@@ -348,12 +348,11 @@ def segment_table(
 def diagnostics(fit: HierarchicalFit) -> dict:
     import arviz as az
 
-    summary = az.summary(
-        fit.idata,
-        var_names=["~rate", "~baseline", "~effect"],
-        filter_vars="like",
-        kind="diagnostics",
-    )
+    # Check every sampled parameter by exact name. Deterministic transforms are left
+    # out because they inherit their convergence from the parameters behind them.
+    deterministic = {"rate", "baseline", "effect"}
+    parameters = [name for name in fit.idata.posterior.data_vars if name not in deterministic]
+    summary = az.summary(fit.idata, var_names=parameters, kind="diagnostics")
     divergences = int(fit.idata.sample_stats["diverging"].sum())
     max_rhat = float(summary["r_hat"].max())
     min_ess = float(summary["ess_bulk"].min())
@@ -362,6 +361,7 @@ def diagnostics(fit: HierarchicalFit) -> dict:
         "min_ess_bulk": min_ess,
         "divergences": divergences,
         "draws": int(fit.rate_draws.shape[0]),
+        "parameters_checked": parameters,
         "converged": bool(max_rhat < 1.01 and min_ess > 400 and divergences == 0),
     }
 
