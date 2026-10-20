@@ -21,6 +21,17 @@ from scipy import optimize, stats
 from .power import _h
 
 
+def _mvn(cov: np.ndarray):
+    """Multivariate normal whose CDF is integrated with a fixed seed and tight tolerance.
+
+    SciPy integrates the CDF with randomised quasi-Monte Carlo, so without a seed the
+    same plan could come out one user per arm different from run to run.
+    """
+    return stats.multivariate_normal(
+        mean=np.zeros(len(cov)), cov=cov, seed=0, maxpts=200_000, abseps=1e-8, releps=1e-8
+    )
+
+
 def dunnett_critical_value(n_offers: int, alpha: float = 0.05, control_ratio: float = 1.0) -> float:
     """Two-sided critical z for comparing `n_offers` arms with one shared control.
 
@@ -33,7 +44,7 @@ def dunnett_critical_value(n_offers: int, alpha: float = 0.05, control_ratio: fl
     rho = 1.0 / (1.0 + control_ratio)
     cov = np.full((n_offers, n_offers), rho)
     np.fill_diagonal(cov, 1.0)
-    mvn = stats.multivariate_normal(mean=np.zeros(n_offers), cov=cov)
+    mvn = _mvn(cov)
 
     def coverage(c: float) -> float:
         return mvn.cdf(np.full(n_offers, c), lower_limit=np.full(n_offers, -c)) - (1 - alpha)
@@ -195,7 +206,7 @@ def aggregate_readout(frame, arms: tuple[str, ...], alpha: float = 0.05) -> list
     k = len(arms) - 1
     cov = np.full((k, k), 0.5)
     np.fill_diagonal(cov, 1.0)
-    mvn = stats.multivariate_normal(mean=np.zeros(k), cov=cov)
+    mvn = _mvn(cov)
     rows = []
     for arm in arms[1:]:
         treated = frame.loc[frame["arm"] == arm, "converted"]
