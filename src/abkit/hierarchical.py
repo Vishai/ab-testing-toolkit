@@ -8,11 +8,14 @@ Data: conversions and users for each segment cell (for example market x device
 x tenure) and each arm. On the log-odds scale,
 
     baseline_c       = a0 + sum_f a_f[level_f(c)] + e_c
-    effect_k,c       = mu_k + sum_f b_k,f[level_f(c)] + d_k,c      (arm k vs control)
+    effect_k,c       = mu_k + sum_f b_k,f[level_f(c)]
+                       + sum_(f,g) b_k,fg[level_f(c), level_g(c)] + d_k,c   (arm k vs control)
     conversions_k,c  ~ Binomial(users_k,c, sigmoid(baseline_c + effect_k,c))
 
 Every term is drawn from a zero-centred normal whose scale is learned from the
-data (non-centred parametrisation). A tiny cell's effect is pulled toward what
+data (non-centred parametrisation). The pairwise terms let an offer work for,
+say, returning desktop shoppers only, without pretending it works for every
+desktop shopper. A tiny cell's effect is pulled toward what
 its market, its device and its tenure say, and toward the arm's overall mean,
 by an amount that depends on how much evidence it has and on how much effects
 actually vary across segments. Priors are weakly informative: they say a
@@ -25,6 +28,7 @@ from __future__ import annotations
 import warnings
 from collections.abc import Sequence
 from dataclasses import dataclass
+from itertools import combinations
 
 import numpy as np
 import pandas as pd
@@ -36,6 +40,7 @@ DEFAULT_ROPE = 0.02  # relative lifts within +/-2% count as "no practical differ
 class Priors:
     effect_mean_sd: float = 0.3
     effect_factor_sd: float = 0.25
+    effect_interaction_sd: float = 0.2
     effect_cell_sd: float = 0.1
     baseline_intercept_sd: float = 1.0
     baseline_factor_sd: float = 0.5
@@ -133,6 +138,12 @@ def build_model(
     pooled = (conversions.sum() + 0.5) / (users.sum() + 1.0)
     coords = {"cell": np.arange(n_cells), "arm": np.arange(n_arms), "treated": np.arange(1, n_arms)}
     coords |= {f"{factor}_level": levels[factor] for factor in codes}
+    pairs = list(combinations(codes, 2))
+    pair_codes = {}
+    for first, second in pairs:
+        width = len(levels[second])
+        pair_codes[(first, second)] = codes[first] * width + codes[second]
+        coords[f"{first}_x_{second}"] = np.arange(len(levels[first]) * width)
 
     with pm.Model(coords=coords) as model:
         a0 = pm.Normal("a0", np.log(pooled / (1 - pooled)), priors.baseline_intercept_sd)
@@ -150,6 +161,11 @@ def build_model(
         for factor, code in codes.items():
             sd = pm.HalfNormal(f"sd_effect_{factor}", priors.effect_factor_sd, dims="treated")
             z = pm.Normal(f"z_effect_{factor}", 0.0, 1.0, dims=(f"{factor}_level", "treated"))
+            effect = effect + (z * sd[None, :])[code]
+        for (first, second), code in pair_codes.items():
+            name = f"{first}_x_{second}"
+            sd = pm.HalfNormal(f"sd_effect_{name}", priors.effect_interaction_sd, dims="treated")
+            z = pm.Normal(f"z_effect_{name}", 0.0, 1.0, dims=(name, "treated"))
             effect = effect + (z * sd[None, :])[code]
         sd_effect_cell = pm.HalfNormal("sd_effect_cell", priors.effect_cell_sd, dims="treated")
         z_effect_cell = pm.Normal("z_effect_cell", 0.0, 1.0, dims=("cell", "treated"))
@@ -427,8 +443,12 @@ def posterior_cell_lifts(fit: HierarchicalFit, arm: str) -> np.ndarray:
 
 SENSITIVITY_PRIORS = {
     "default": Priors(),
-    "skeptical": Priors(effect_mean_sd=0.1, effect_factor_sd=0.1, effect_cell_sd=0.05),
-    "wide": Priors(effect_mean_sd=1.0, effect_factor_sd=0.75, effect_cell_sd=0.3),
+    "skeptical": Priors(
+        effect_mean_sd=0.1, effect_factor_sd=0.1, effect_interaction_sd=0.07, effect_cell_sd=0.05
+    ),
+    "wide": Priors(
+        effect_mean_sd=1.0, effect_factor_sd=0.75, effect_interaction_sd=0.5, effect_cell_sd=0.3
+    ),
 }
 
 
