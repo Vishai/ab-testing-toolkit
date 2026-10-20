@@ -13,11 +13,11 @@ Method
   2. Each user's predicted uplift from offer k is p_k(x) - p_control(x).
   3. The targeted policy gives each user the arm with the highest prediction.
   4. Because assignment was randomised with known probabilities, a policy's
-     conversion rate can be estimated without bias from the experiment itself
-     (inverse propensity weighting): count the users whose random arm happened
-     to match what the policy would have chosen, weighted by 1 / P(arm). Every
-     user's decision comes from models that never saw them, and a bootstrap
-     gives the interval.
+     conversion rate can be estimated from the experiment itself (self-normalised
+     inverse propensity weighting): the weighted conversion rate of users whose
+     random arm happened to match what the policy would have chosen, with weight
+     1 / P(arm). Every user's decision comes from models that never saw them, and
+     a paired bootstrap gives the interval.
 """
 
 from __future__ import annotations
@@ -85,9 +85,16 @@ def policy_from_predictions(predictions: np.ndarray, arms: Sequence[str],
 
 def ipw_value(converted: np.ndarray, assigned: np.ndarray, chosen: np.ndarray,
               propensity: dict[str, float]) -> float:
-    """Unbiased conversion rate of a policy, estimated from a randomised experiment."""
-    weights = np.array([1.0 / propensity[a] for a in assigned])
-    return float(np.mean(converted * (assigned == chosen) * weights))
+    """Conversion rate of a policy, estimated from a randomised experiment.
+
+    Self-normalised inverse propensity weighting: among users whose random arm
+    matched what the policy would choose, a weighted conversion rate. Dividing by
+    the realised weight instead of n means chance imbalance in arm sizes cancels
+    out, and a fixed policy ("everyone gets offer k") gets exactly arm k's
+    observed rate.
+    """
+    weights = (assigned == chosen) / np.array([propensity[a] for a in assigned])
+    return float((weights * converted).sum() / weights.sum())
 
 
 def evaluate_policies(
@@ -98,32 +105,41 @@ def evaluate_policies(
     n_boot: int = 500,
     seed: int = 9,
 ) -> pd.DataFrame:
-    """IPW conversion rate of each policy and its lift over the baseline, with bootstrap CIs."""
+    """Self-normalised IPW conversion rate of each policy and its lift over the baseline.
+
+    Intervals come from a paired bootstrap: every policy is re-estimated on the same
+    resampled users, so the lift interval reflects the comparison, not two
+    independent noises.
+    """
     y = frame["converted"].to_numpy()
     assigned = frame["arm"].to_numpy()
-    weights = np.array([1.0 / propensity[a] for a in assigned])
-    matches = {name: (assigned == chosen) * weights * y for name, chosen in policies.items()}
+    inverse = 1.0 / np.array([propensity[a] for a in assigned])
+    weights = {name: (assigned == chosen) * inverse for name, chosen in policies.items()}
+
+    def value(name: str, idx: np.ndarray | slice) -> float:
+        w = weights[name][idx]
+        return float((w * y[idx]).sum() / w.sum())
+
     rng = np.random.default_rng(seed)
     n = len(y)
-    boot = {name: [] for name in policies}
-    for _ in range(n_boot):
+    boot = {name: np.empty(n_boot) for name in policies}
+    for b in range(n_boot):
         idx = rng.integers(0, n, n)
-        for name, contribution in matches.items():
-            boot[name].append(contribution[idx].mean())
-    boot = {name: np.array(values) for name, values in boot.items()}
+        for name in policies:
+            boot[name][b] = value(name, idx)
+    base = value(baseline, slice(None))
     rows = []
-    for name, contribution in matches.items():
-        value = contribution.mean()
-        base = matches[baseline].mean()
+    for name in policies:
+        estimate = value(name, slice(None))
         lift = boot[name] - boot[baseline]
         relative = boot[name] / boot[baseline] - 1
         rows.append(
             {
                 "policy": name,
-                "conversion_rate": float(value),
-                "abs_lift": float(value - base),
+                "conversion_rate": estimate,
+                "abs_lift": estimate - base,
                 "abs_lift_ci": (float(np.quantile(lift, 0.025)), float(np.quantile(lift, 0.975))),
-                "rel_lift": float(value / base - 1),
+                "rel_lift": estimate / base - 1,
                 "rel_lift_ci": (
                     float(np.quantile(relative, 0.025)),
                     float(np.quantile(relative, 0.975)),

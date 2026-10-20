@@ -94,3 +94,19 @@ def test_ipw_matches_arm_means_for_fixed_policies():
     row = table.set_index("policy").loc["all_a"]
     assert row["rel_lift"] == pytest.approx(1.0, abs=0.25)
     assert row["rel_lift_ci"][0] > 0
+
+
+def test_fixed_policies_equal_the_observed_arm_rates():
+    rng = np.random.default_rng(1)
+    assigned = rng.choice(["control", "a"], 3_000, p=[0.62, 0.38])  # chance imbalance vs 50/50
+    converted = (rng.random(3_000) < 0.1).astype(int)
+    propensity = {"control": 0.5, "a": 0.5}
+    frame = pd.DataFrame({"arm": assigned, "converted": converted})
+    table = evaluate_policies(frame, {"all_control": np.full(3_000, "control"),
+                                      "all_a": np.full(3_000, "a")}, propensity, n_boot=100)
+    rates = frame.groupby("arm").converted.mean()
+    values = table.set_index("policy").conversion_rate
+    assert values["all_control"] == pytest.approx(rates["control"])
+    assert values["all_a"] == pytest.approx(rates["a"])
+    assert ipw_value(converted, assigned, np.full(3_000, "a"), propensity) == pytest.approx(
+        rates["a"])
