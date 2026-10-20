@@ -99,7 +99,7 @@ each design decision is in the commit history.
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -e ".[app,fast,dev]"
 
-python -m pytest                                     # 80 tests
+python -m pytest                                     # 91 tests
 python -m abkit.workflow run --run-id demo --quick   # whole pipeline in about 2 minutes
 python -m abkit.workflow run --run-id full           # 4 chains x 1,000 draws, about 7 minutes
 python -m streamlit run app/posterior_dashboard.py   # dashboard for finished runs
