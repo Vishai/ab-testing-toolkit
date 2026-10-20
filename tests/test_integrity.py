@@ -93,3 +93,15 @@ def test_srm_helper_matches_scipy_and_names_the_worst_arm():
     assert result["status"] == "warn"
     assert result["p_value"] == pytest.approx(0.0023, abs=0.0005)
     assert result["most_off_arm"] in {"control", "variation"}
+
+
+def test_lag_statistics_use_only_users_whose_window_closed():
+    cutoff = datetime(2025, 9, 18)
+    experiment = simulate(with_defects(BASE, analysis_at=cutoff))
+    delay = integrity.run_integrity_checks(experiment)["details"]["delayed_conversions"]
+    first = experiment.assignments.drop_duplicates("user_id").set_index("user_id")
+    mature = first[first.assigned_at + pd.Timedelta(days=14) <= cutoff]
+    conv = experiment.conversions.groupby("user_id").converted_at.min()
+    joined = mature.join(conv, how="inner")
+    lags = (joined.converted_at - joined.assigned_at).dt.total_seconds() / 86_400
+    assert delay["median_lag_days"] == pytest.approx(lags.median())
