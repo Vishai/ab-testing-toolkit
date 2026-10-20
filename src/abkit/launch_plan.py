@@ -18,6 +18,7 @@ from collections.abc import Mapping
 import numpy as np
 from scipy import optimize, stats
 
+from .hierarchical import DEFAULT_ROPE
 from .power import _h
 
 
@@ -76,8 +77,12 @@ def bayesian_assurance(
     threshold: float = 0.95,
     sims: int = 20_000,
     seed: int = 4,
+    rope: float = DEFAULT_ROPE,
 ) -> float:
-    """Chance the posterior ends up with P(offer beats control) above `threshold`.
+    """Chance the read-out ends up calling the offer a real lift.
+
+    That uses the same rule as the read-out: at least `threshold` of the posterior
+    says the relative lift beats `rope`, the smallest lift that matters in practice.
 
     The true lift isn't known before launch, so it's drawn from a design prior.
     Each simulated test uses a Beta(1, 1) posterior per arm (normal approximation
@@ -90,12 +95,14 @@ def bayesian_assurance(
     x_treated = rng.binomial(n_per_arm, treated)
     a_c, b_c = 1 + x_control, 1 + n_per_arm - x_control
     a_t, b_t = 1 + x_treated, 1 + n_per_arm - x_treated
-    mean_diff = a_t / (a_t + b_t) - a_c / (a_c + b_c)
-    var = (a_t * b_t) / ((a_t + b_t) ** 2 * (a_t + b_t + 1)) + (a_c * b_c) / (
+    # Relative lift above `rope` means p_t - (1 + rope) * p_c > 0.
+    scale = 1.0 + rope
+    mean_diff = a_t / (a_t + b_t) - scale * a_c / (a_c + b_c)
+    var = (a_t * b_t) / ((a_t + b_t) ** 2 * (a_t + b_t + 1)) + scale**2 * (a_c * b_c) / (
         (a_c + b_c) ** 2 * (a_c + b_c + 1)
     )
-    prob_better = stats.norm.cdf(mean_diff / np.sqrt(var))
-    return float((prob_better > threshold).mean())
+    prob_real = stats.norm.cdf(mean_diff / np.sqrt(var))
+    return float((prob_real >= threshold).mean())
 
 
 def simulated_power(
@@ -192,6 +199,7 @@ def plan_launch(
             baseline, n_per_arm, len(offers), z_crit
         ),
         "bayesian_assurance": bayesian_assurance(baseline, n_per_arm, mde_rel, mde_rel / 2),
+        "assurance_rope": DEFAULT_ROPE,
     }
 
 
