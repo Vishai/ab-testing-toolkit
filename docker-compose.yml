@@ -1,0 +1,80 @@
+# Airflow (LocalExecutor + Postgres) running the abkit experiment DAG.
+#
+#   mkdir -p artifacts && echo "AIRFLOW_UID=$(id -u)" > .env
+#   docker compose up -d --build
+#   open http://localhost:8080   (user and password from AIRFLOW_ADMIN_USER / _PASSWORD, default admin / admin)
+#
+# Set ABKIT_S3_URI in .env to publish every finished run to S3.
+
+x-airflow: &airflow
+  build:
+    context: .
+    dockerfile: docker/airflow.Dockerfile
+  image: abkit-airflow:local
+  user: "${AIRFLOW_UID:-50000}:0"
+  environment:
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "false"
+    AIRFLOW__WEBSERVER__SECRET_KEY: "${AIRFLOW_SECRET_KEY:-change-me-in-production}"
+    ABKIT_OUTPUT_ROOT: /opt/airflow/artifacts/runs
+    ABKIT_S3_URI: "${ABKIT_S3_URI:-}"
+  volumes:
+    - ./airflow/dags:/opt/airflow/dags
+    - ./artifacts:/opt/airflow/artifacts
+  depends_on:
+    postgres:
+      condition: service_healthy
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 10s
+      retries: 5
+    restart: unless-stopped
+
+  airflow-init:
+    <<: *airflow
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - >-
+        airflow db migrate &&
+        airflow users create --role Admin
+        --username "${AIRFLOW_ADMIN_USER:-admin}" --password "${AIRFLOW_ADMIN_PASSWORD:-admin}"
+        --firstname Admin --lastname User --email admin@example.com || true
+    restart: "no"
+
+  airflow-webserver:
+    <<: *airflow
+    command: webserver
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  airflow-scheduler:
+    <<: *airflow
+    command: scheduler
+    depends_on:
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
