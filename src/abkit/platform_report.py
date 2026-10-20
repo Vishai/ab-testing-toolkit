@@ -126,7 +126,8 @@ def render_report(bundle: dict) -> str:
             "- Simulated power at the target lift: "
             + ", ".join(f"{k} {v:.1%}" for k, v in plan["simulated_power_at_mde"].items())
             + f"; family-wise false positives {plan['simulated_familywise_error']:.1%}; "
-            f"Bayesian assurance {plan['bayesian_assurance']:.0%}.",
+            f"Bayesian assurance {plan['bayesian_assurance']:.0%} (chance the read-out calls an offer "
+            f"at the target lift a real lift, beating +{plan.get('assurance_rope', 0.02):.0%}).",
             "", "| Segment | Share | Users per arm | Smallest detectable lift alone |",
             "|---|---:|---:|---:|",
             *(f"| {s['segment']} | {s['share']:.0%} | {s['users_per_arm']:,.0f} | "
