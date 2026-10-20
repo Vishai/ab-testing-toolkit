@@ -138,3 +138,20 @@ def test_prior_sensitivity_reports_every_prior():
     assert list(table.prior) == ["default", "skeptical", "wide"]
     skeptical, wide = table.set_index("prior").loc[["skeptical", "wide"], "rel_lift_mean"]
     assert abs(skeptical) < abs(wide)
+
+
+def test_diagnostics_cover_every_sampled_parameter(fitted):
+    fit, _ = fitted
+    checked = set(h.diagnostics(fit)["parameters_checked"])
+    sampled = {v for v in fit.idata.posterior.data_vars if v not in {"rate", "baseline", "effect"}}
+    assert checked == sampled
+    assert {"effect_mean", "sd_effect_device", "z_effect_device_x_tenure"} <= checked
+
+
+def test_finer_cells_are_summed_not_averaged(experiment):
+    frame = analysis_frame(experiment)
+    fine = h.cells_from_frame(frame, ("market", "device", "tenure"))
+    fit = h.fit(fine, ("tenure",), ARMS, sampler=h.SamplerSettings(draws=100, tune=200, chains=1),
+                prior_samples=20)
+    users = fit.cells[[f"users_{arm}" for arm in ARMS]].to_numpy().sum()
+    assert users == len(frame)
