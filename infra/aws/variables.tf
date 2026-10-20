@@ -50,7 +50,7 @@ variable "disk_gb" {
 variable "repo_url" {
   description = "Git repository to deploy."
   type        = string
-  default     = "https://github.com/Vishai/bayesian-experimentation-uplift-platform.git"
+  default     = "https://github.com/Vishai/bayesian-experimentation-uplift-modeling-platform.git"
 }
 
 variable "repo_ref" {
