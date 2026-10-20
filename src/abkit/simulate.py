@@ -45,11 +45,11 @@ OFFER_COST_SHARE = {"control": 0.0, "pct10_discount": 0.10, "free_shipping": 0.0
 
 @dataclass(frozen=True)
 class ExperimentConfig:
-    n_users: int = 116_000
+    n_users: int = 117_000
     arms: tuple[str, ...] = ARMS
     allocation: tuple[float, ...] = (0.25, 0.25, 0.25, 0.25)
     start: datetime = datetime(2025, 9, 1)
-    enrollment_days: int = 21
+    enrollment_days: int = 22
     conversion_window_days: int = 14
     mean_conversion_delay_days: float = 2.5
     analysis_at: datetime | None = None
