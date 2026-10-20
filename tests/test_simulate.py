@@ -111,3 +111,13 @@ def test_config_validation():
         ExperimentConfig(arms=("bundle", "control"), allocation=(0.5, 0.5))
     with pytest.raises(ValueError):
         ExperimentConfig(exposure_loss={"mystery": 0.1})
+
+
+def test_an_early_data_pull_contains_nothing_from_after_it():
+    cutoff = datetime(2025, 9, 18)
+    early = simulate(with_defects(SMALL, analysis_at=cutoff))
+    assert (early.assignments.assigned_at <= cutoff).all()
+    assert (early.exposures.exposed_at <= cutoff).all()
+    assert (early.conversions.converted_at <= cutoff).all()
+    assert set(early.users.user_id) == set(early.assignments.user_id)
+    assert len(early.users) < SMALL.n_users

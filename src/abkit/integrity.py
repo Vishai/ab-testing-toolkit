@@ -117,11 +117,14 @@ def delayed_conversions(
     chance to convert. Counting them as non-converters biases every rate down,
     and biases comparisons whenever arms enrolled at different times.
     """
-    first_conversion = conversions.groupby("user_id")["converted_at"].min()
-    joined = first_assignment.set_index("user_id").join(first_conversion, how="inner")
-    lag_days = (joined["converted_at"] - joined["assigned_at"]).dt.total_seconds() / 86_400
     window_end = first_assignment["assigned_at"] + pd.Timedelta(days=window_days)
     immature = window_end > cutoff
+    # Lags are measured only on users whose window had closed. An immature user's
+    # slow conversions haven't happened yet, so including them biases lags short.
+    measured = first_assignment[~immature] if (~immature).any() else first_assignment
+    first_conversion = conversions.groupby("user_id")["converted_at"].min()
+    joined = measured.set_index("user_id").join(first_conversion, how="inner")
+    lag_days = (joined["converted_at"] - joined["assigned_at"]).dt.total_seconds() / 86_400
     after_window = float((lag_days > window_days).mean()) if len(lag_days) else 0.0
     quantiles = lag_days.quantile([0.5, 0.9, 0.99]).to_dict() if len(lag_days) else {}
     p99 = quantiles.get(0.99, 0.0)

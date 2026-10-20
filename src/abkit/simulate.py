@@ -223,6 +223,12 @@ def simulate(config: ExperimentConfig | None = None) -> Experiment:
         users = users.copy()
         users["checkout_visits"] = rng.poisson(0.6 + 2.2 * converted + 0.4 * (arm_index > 0))
 
+    # Pulling data early means users who hadn't arrived yet aren't in any table.
+    cutoff = pd.Timestamp(cfg.cutoff)
+    assignments = assignments[assignments["assigned_at"] <= cutoff]
+    exposures = exposures[exposures["exposed_at"] <= cutoff]
+    users = users[users["user_id"].isin(assignments["user_id"])].reset_index(drop=True)
+
     exposures = exposures.sort_values("exposed_at", ignore_index=True)
     assignments = assignments.sort_values("assigned_at", ignore_index=True)
     conversions = conversions.sort_values("converted_at", ignore_index=True)
