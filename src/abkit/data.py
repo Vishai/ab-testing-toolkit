@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pandas as pd
@@ -22,7 +23,10 @@ REQUIRED_COLUMNS = (
 
 GROUP_MAP = {"A_Control": "A", "B_Variation": "B"}
 
-DEFAULT_DATA_DIR = Path(__file__).resolve().parents[2] / "data" / "raw"
+# ABKIT_DATA_DIR lets an installed copy (for example in a container) find the datasets.
+DEFAULT_DATA_DIR = Path(
+    os.environ.get("ABKIT_DATA_DIR", Path(__file__).resolve().parents[2] / "data" / "raw")
+)
 
 
 def load(scenario: str | Scenario, data_dir: str | Path | None = None) -> pd.DataFrame:

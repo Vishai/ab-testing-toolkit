@@ -1,7 +1,12 @@
-"""Copy a finished run folder to S3 so dashboards and people can read it."""
+"""Copy a finished run folder to S3 so dashboards and people can read it.
+
+Usage:
+    python -m abkit.publish artifacts/runs/20250923 s3://bucket/prefix
+"""
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -33,3 +38,17 @@ def publish_run(run_dir: Path | str, uri: str, client=None) -> list[str]:
         client.upload_file(str(path), bucket, key)
         keys.append(key)
     return keys
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = sys.argv[1:] if argv is None else argv
+    if len(args) != 2:
+        print("usage: python -m abkit.publish RUN_DIR s3://bucket/prefix", file=sys.stderr)
+        return 2
+    keys = publish_run(args[0], args[1])
+    print(f"Uploaded {len(keys)} files")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
