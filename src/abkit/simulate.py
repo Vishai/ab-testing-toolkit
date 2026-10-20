@@ -92,7 +92,7 @@ class Experiment:
     assignments: pd.DataFrame
     exposures: pd.DataFrame
     conversions: pd.DataFrame
-    truth: pd.DataFrame  # true conversion probability of every user under every arm
+    truth: pd.DataFrame | None  # true P(convert) per user and arm; None for real logs
 
 
 def baseline_logit(users: pd.DataFrame) -> np.ndarray:
