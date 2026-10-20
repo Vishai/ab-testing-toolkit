@@ -54,8 +54,15 @@ def findings(bundle: dict) -> list[str]:
         )
     aggregate = bundle.get("aggregate")
     if aggregate:
-        winners = [o["offer"] for o in aggregate["offers"] if o["significant"]]
+        winners = [o["offer"] for o in aggregate["offers"]
+                   if o["significant"] and o["rel_lift"] > 0]
+        losers = [o["offer"] for o in aggregate["offers"]
+                  if o["significant"] and o["rel_lift"] < 0]
         best = max(aggregate["offers"], key=lambda o: o["rel_lift"])
+        if losers:
+            out.append(
+                f"The aggregate test (Dunnett-adjusted) says {', '.join(losers)} made things worse."
+            )
         if winners:
             out.append(f"The aggregate test (Dunnett-adjusted) found a winner: {', '.join(winners)}.")
         else:
@@ -185,6 +192,11 @@ def render_report(bundle: dict) -> str:
     if uplift:
         lines += [
             "", "## 5. Uplift modelling: who responds to which offer", "",
+            ("Policy values are self-normalised inverse propensity estimates on users the models "
+            "never trained on. The intervals are paired bootstrap intervals for each policy on its "
+            "own; they are not adjusted for comparing several fixed offers, which is what the "
+            "Dunnett-adjusted test in section 3 is for."),
+            "",
             "| Policy | Conversion | Lift vs control | 95% interval |", "|---|---:|---:|---|",
             *(f"| {p['policy']} | {p['conversion_rate']:.2%} | {p['rel_lift']:+.1%} | "
               f"{_pct(p['rel_lift_ci'][0])} to {_pct(p['rel_lift_ci'][1])} |"

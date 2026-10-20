@@ -203,3 +203,15 @@ def test_publish_uploads_results_but_not_raw_logs(finished):
     assert parse_s3_uri("s3://bucket/a/b") == ("bucket", "a/b")
     with pytest.raises(ValueError):
         parse_s3_uri("https://example.com/x")
+
+
+def test_a_significantly_worse_offer_is_never_called_a_winner():
+    from abkit.platform_report import findings
+
+    bundle = {"aggregate": {"offers": [
+        {"offer": "a", "rel_lift": -0.15, "significant": True, "p_dunnett": 0.001},
+        {"offer": "b", "rel_lift": 0.02, "significant": False, "p_dunnett": 0.6},
+    ]}}
+    text = " ".join(findings(bundle))
+    assert "winner: a" not in text
+    assert "a made things worse" in text
